@@ -4,148 +4,199 @@
 <meta charset="UTF-8">
 <title>Rhythm Game</title>
 <style>
-    body, html {
-        height: 100%;
-        margin: 0;
+    body {
+        font-family: 'Arial', sans-serif;
+        background-color: #f0f0f0;
         display: flex;
         justify-content: center;
         align-items: center;
-        background-color: #1a1a1a;
-        font-family: Arial, sans-serif;
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
     }
-    #game-area {
-        width: 800px;
-        height: 600px;
-        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><rect width="100%" height="100%" fill="%232c3e50"/></svg>');
+    #game-container {
         position: relative;
-    }
-    .note {
-        width: 40px;
-        height: 20px;
-        position: absolute;
-        background: #3498db;
-        border-radius: 5px;
+        width: 600px;
+        height: 400px;
+        background: #fff;
+        border: 2px solid #000;
+        overflow: hidden;
     }
     #score {
         position: absolute;
         top: 10px;
         right: 10px;
-        color: white;
-        font-size: 24px;
+        font-size: 20px;
+        z-index: 10;
     }
     .key-line {
         position: absolute;
-        bottom: 100px;
+        bottom: 50px;
         width: 100%;
         height: 2px;
-        background: white;
+        background: red;
     }
     .key {
         position: absolute;
-        bottom: 20px;
-        color: white;
-        font-size: 24px;
+        bottom: 10px;
+        width: 50px;
+        height: 40px;
+        background: #ddd;
+        text-align: center;
+        line-height: 40px;
+        font-weight: bold;
     }
-    #keyA { left: 180px; }
-    #keyS { left: 380px; }
-    #keyD { left: 580px; }
-    #keyF { left: 780px; }
+    .key:nth-child(1) { left: 100px; }
+    .key:nth-child(2) { left: 200px; }
+    .key:nth-child(3) { left: 300px; }
+    .key:nth-child(4) { left: 400px; }
+    .note {
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: blue;
+        transform: translate(-50%, -50%);
+    }
+    .note.shape-a { background: #ff0000; }
+    .note.shape-s { background: #00ff00; }
+    .note.shape-d { background: #0000ff; }
+    .note.shape-f { background: #ffff00; }
+    #start-screen, #end-screen {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        color: white;
+        z-index: 20;
+    }
+    button {
+        margin: 10px;
+        padding: 10px 20px;
+        font-size: 16px;
+    }
 </style>
 </head>
 <body>
-<div id="game-area">
+
+<div id="game-container">
     <div id="score">Score: 0</div>
     <div class="key-line"></div>
-    <div id="keyA" class="key">A</div>
-    <div id="keyS" class="key">S</div>
-    <div id="keyD" class="key">D</div>
-    <div id="keyF" class="key">F</div>
+    <div class="key">A</div>
+    <div class="key">S</div>
+    <div class="key">D</div>
+    <div class="key">F</div>
+    <div id="start-screen">
+        <h2>Choose Difficulty</h2>
+        <button onclick="startGame('easy')">Easy</button>
+        <button onclick="startGame('medium')">Medium</button>
+        <button onclick="startGame('hard')">Hard</button>
+    </div>
+    <div id="end-screen" style="display: none;">
+        <h2>Game Over</h2>
+        <p id="final-score"></p>
+        <button onclick="restartGame()">Restart</button>
+        <button onclick="document.getElementById('start-screen').style.display='flex';document.getElementById('end-screen').style.display='none';">New Level</button>
+    </div>
 </div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.1/howler.min.js"></script>
+
 <script>
-    const gameArea = document.getElementById('game-area');
+    const gameContainer = document.getElementById('game-container');
+    const scoreElement = document.getElementById('score');
+    const endScreen = document.getElementById('end-screen');
+    const finalScore = document.getElementById('final-score');
     let score = 0;
+    let gameInterval;
     let notes = [];
-    let gameSpeed = 2; // Default to easy
-    let gameActive = false;
-    const keys = { 'a': 180, 's': 380, 'd': 580, 'f': 780 };
-    const hitSound = new Howl({ src: ['path/to/hit.wav'] });
-    const missSound = new Howl({ src: ['path/to/miss.wav'] });
+    let speed = 1; // default speed
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    const hitSound = new Audio('data:audio/wav;base64,//uQRAAAAWMSLwUIYAAsYkXgoQwAEaYLWfkWgAI0wWs/ItAAAGDgYtAgAyN+QWaAAihwMWm4G8QQRDiMcCBcH3Cc+CDv/7xA4Tvh9Rz/y8QADBwMWgQAZG/ILNAARQ4GLTcDeIIIhxGOBAuD7hOfBB3/94gcJ3w+o5/5eIAIAAAVwWgQAVQ2OFCAHN+Bjo5Om4gD6Spg+HVh7cBwAgh1AAIKoAQDkgowA8//sSQAAeFgAAACAAAAAA//uQZAU9lVUFTg4sgNJVEGRXM//uQZBAAAAwAAAAW0qEAAIAAACUkgAFwAAAAAAAD//wEAAAAAAADYwMAAAD//wEA//8AAA=='); // Simple beep sound for hit
+    const missSound = new Audio('data:audio/wav;base64,//uQRAAAAWMSLwUIYAAsYkXgoQwAEaYLWfkWgAI0wWs/ItAAAGDgYtAgAyN+QWaAAihwMWm4G8QQRDiMcCBcH3Cc+CDv/7xA4Tvh9Rz/y8QADBwMWgQAZG/ILNAARQ4GLTcDeIIIhxGOBAuD7hOfBB3/94gcJ3w+o5/5eIAIAAAVwWgQAVQ2OFCAHN+Bjo5Om4gD6Spg+HVh7cBwAgh1AAIKoAQDkgowA8//sSQAAeFgAAACAAAAAA//uQZAU9lVUFTg4sgNJVEGRXM//uQZBAAAAwAAAAW0qEAAIAAACUkgAFwAAAAAAAD//wEAAAAAAADYwMAAAD//wEA//8AAA=='); // Same sound for simplicity, ideally should be different
 
     function createNote() {
         const note = document.createElement('div');
-        note.className = 'note';
+        note.classList.add('note');
+        const shapes = ['shape-a', 'shape-s', 'shape-d', 'shape-f'];
+        note.classList.add(shapes[Math.floor(Math.random() * shapes.length)]);
         note.style.top = '0px';
-        const key = Object.keys(keys)[Math.floor(Math.random() * 4)];
-        note.dataset.key = key;
-        note.style.left = keys[key] + 'px';
-        gameArea.appendChild(note);
-        notes.push({element: note, key: key, y: 0});
+        note.style.left = `${Math.floor(Math.random() * 4) * 100 + 100}px`;
+        gameContainer.appendChild(note);
+        return note;
     }
 
-    function gameLoop() {
-        if (!gameActive) return;
-
-        notes.forEach((note, index) => {
-            note.y += gameSpeed;
-            if (note.y > 600) {
-                missNote(note.element);
+    function moveNotes() {
+        notes.forEach(note => {
+            const top = note.offsetTop + speed;
+            if (top > gameContainer.offsetHeight) {
+                note.remove();
+                notes.splice(notes.indexOf(note), 1);
+                updateScore(-5);
             } else {
-                note.element.style.top = note.y + 'px';
+                note.style.top = `${top}px`;
             }
         });
-
-        requestAnimationFrame(gameLoop);
     }
 
-    function missNote(noteElement) {
-        score = Math.max(score - 5, -20);
-        updateScore();
-        if (score <= -20) endGame();
-        gameArea.removeChild(noteElement);
-        notes.shift(); // Remove the missed note
-        missSound.play();
+    function startGame(difficulty) {
+        document.getElementById('start-screen').style.display = 'none';
+        score = 0;
+        updateScore(0);
+        speed = difficulty === 'easy' ? 1 : difficulty === 'medium' ? 2 : 3;
+        gameInterval = setInterval(() => {
+            notes.push(createNote());
+            if (notes.length === 0) {
+                notes.push(createNote());
+            }
+        }, 2000 / speed);
+        document.addEventListener('keydown', checkKey);
     }
 
-    function hitNote(key) {
-        const noteToHit = notes.find(n => n.key === key && Math.abs(n.y - 500) < 10); // 500 is approx where the line would be
-        if (noteToHit) {
-            score += 5;
-            updateScore();
-            gameArea.removeChild(noteToHit.element);
-            notes = notes.filter(n => n !== noteToHit);
-            hitSound.play();
+    function checkKey(e) {
+        if(['a', 's', 'd', 'f'].includes(e.key)) {
+            const note = notes.find(n => 
+                Math.abs(n.offsetTop - (gameContainer.offsetHeight - 50)) < 10 && 
+                n.classList.contains(`shape-${e.key}`)
+            );
+            if (note) {
+                note.remove();
+                notes.splice(notes.indexOf(note), 1);
+                updateScore(5);
+                hitSound.currentTime = 0;
+                hitSound.play();
+            } else {
+                updateScore(-5);
+                missSound.currentTime = 0;
+                missSound.play();
+            }
         }
     }
 
-    function updateScore() {
-        document.getElementById('score').innerText = 'Score: ' + score;
+    function updateScore(points) {
+        score += points;
+        scoreElement.textContent = `Score: ${score}`;
+        if (score <= -20) {
+            endGame();
+        }
     }
 
     function endGame() {
-        gameActive = false;
-        alert('Game Over! Your score: ' + score);
-        // Here you would reset or offer level selection again
+        clearInterval(gameInterval);
+        document.removeEventListener('keydown', checkKey);
+        notes.forEach(note => note.remove());
+        notes = [];
+        finalScore.textContent = `Your Score: ${score}`;
+        endScreen.style.display = 'flex';
     }
 
-    window.addEventListener('keydown', function(e) {
-        if (['a', 's', 'd', 'f'].includes(e.key.toLowerCase()) && gameActive) {
-            hitNote(e.key.toLowerCase());
-        }
-    });
-
-    // Setup level selection and start game logic here
-    // For simplicity, not included in this snippet
-
-    // Start game
-    function startGame() {
-        gameActive = true;
-        setInterval(createNote, 1000 / gameSpeed); // Adjust interval based on speed
-        gameLoop();
+    function restartGame() {
+        endScreen.style.display = 'none';
+        startGame(speed === 1 ? 'easy' : speed === 2 ? 'medium' : 'hard');
     }
-
-    // Call startGame when ready
-    // startGame();
 </script>
 </body>
 </html>
