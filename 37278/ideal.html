@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rhythm Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        #game-container {
+            width: 400px;
+            height: 600px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            position: relative;
+        }
+        #menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(255,255,255,0.9);
+            z-index: 10;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(255,255,255,0.9);
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="menu">
+            <h2>Select Difficulty</h2>
+            <button onclick="startGame('easy')">Easy</button>
+            <button onclick="startGame('medium')">Medium</button>
+            <button onclick="startGame('hard')">Hard</button>
+        </div>
+        <div id="score">Score: 0</div>
+        <svg width="400" height="600" id="game-svg"></svg>
+        <div id="game-over">
+            <h2>Game Over</h2>
+            <button onclick="restartGame()">Restart</button>
+            <button onclick="showMenu()">Select New Level</button>
+        </div>
+    </div>
+
+    <script>
+        const svg = document.getElementById('game-svg');
+        const scoreElement = document.getElementById('score');
+        const menu = document.getElementById('menu');
+        const gameOver = document.getElementById('game-over');
+        let score = 0;
+        let gameInterval;
+        let notes = [];
+        let speed;
+        let lastNoteTime = 0;
+        let audioContext;
+        let difficulty;
+
+        function startGame(selectedDifficulty) {
+            difficulty = selectedDifficulty;
+            menu.style.display = 'none';
+            gameOver.style.display = 'none';
+            score = 0;
+            notes = [];
+            updateScore();
+
+            speed = difficulty === 'easy' ? 2 : difficulty === 'medium' ? 3 : 4;
+
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            svg.innerHTML = `
+                <line x1="0" y1="500" x2="400" y2="500" stroke="black" stroke-width="2" />
+                <rect x="0" y="500" width="100" height="100" fill="#ffcccc" />
+                <rect x="100" y="500" width="100" height="100" fill="#ccffcc" />
+                <rect x="200" y="500" width="100" height="100" fill="#ccccff" />
+                <rect x="300" y="500" width="100" height="100" fill="#ffffcc" />
+                <text x="50" y="550" text-anchor="middle" font-size="24">A</text>
+                <text x="150" y="550" text-anchor="middle" font-size="24">S</text>
+                <text x="250" y="550" text-anchor="middle" font-size="24">D</text>
+                <text x="350" y="550" text-anchor="middle" font-size="24">F</text>
+            `;
+
+            gameInterval = setInterval(gameLoop, 1000 / 60);
+            document.addEventListener('keydown', handleKeyPress);
+        }
+
+        function gameLoop() {
+            const currentTime = Date.now();
+            if (currentTime - lastNoteTime > 1000) {
+                createNote();
+                lastNoteTime = currentTime;
+            }
+
+            notes.forEach((note, index) => {
+                note.y += speed;
+                note.element.setAttribute('cy', note.y);
+
+                if (note.y > 550) {
+                    svg.removeChild(note.element);
+                    notes.splice(index, 1);
+                    updateScore(-5);
+                }
+            });
+
+            if (score < -20) {
+                endGame();
+            }
+        }
+
+        function createNote() {
+            const lane = Math.floor(Math.random() * 4);
+            const noteElement = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            noteElement.setAttribute('cx', 50 + lane * 100);
+            noteElement.setAttribute('cy', 0);
+            noteElement.setAttribute('r', 20);
+            noteElement.setAttribute('fill', ['#ff6666', '#66ff66', '#6666ff', '#ffff66'][lane]);
+            svg.appendChild(noteElement);
+
+            notes.push({
+                lane: lane,
+                y: 0,
+                element: noteElement
+            });
+        }
+
+        function handleKeyPress(event) {
+            const key = event.key.toLowerCase();
+            const laneIndex = 'asdf'.indexOf(key);
+            if (laneIndex !== -1) {
+                const hitNote = notes.find(note => note.lane === laneIndex && Math.abs(note.y - 500) < 20);
+                if (hitNote) {
+                    svg.removeChild(hitNote.element);
+                    notes = notes.filter(note => note !== hitNote);
+                    updateScore(5);
+                    playSound(220 * Math.pow(2, laneIndex / 12));
+                }
+            }
+        }
+
+        function updateScore(points = 0) {
+            score += points;
+            scoreElement.textContent = `Score: ${score}`;
+        }
+
+        function playSound(frequency) {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.5, audioContext.currentTime + 0.01);
+            gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.1);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        function endGame() {
+            clearInterval(gameInterval);
+            document.removeEventListener('keydown', handleKeyPress);
+            gameOver.style.display = 'flex';
+        }
+
+        function restartGame() {
+            startGame(difficulty);
+        }
+
+        function showMenu() {
+            menu.style.display = 'flex';
+            gameOver.style.display = 'none';
+        }
+    </script>
+</body>
+</html>

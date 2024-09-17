@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rhythm Game</title>
+<style>
+body { 
+    font-family: Arial, sans-serif; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    height: 100vh; 
+    margin: 0; 
+    background-color: #f0f0f0; 
+}
+#game-container {
+    position: relative;
+    width: 800px;
+    height: 600px;
+    background: #fff;
+    border: 2px solid #000;
+    overflow: hidden;
+}
+#level-select, #game-over {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 10;
+}
+button {
+    margin: 10px;
+    padding: 10px 20px;
+    font-size: 1em;
+    cursor: pointer;
+}
+#score {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 20px;
+}
+.key {
+    fill: #ccc;
+}
+.note {
+    fill: #ff0000;
+}
+</style>
+</head>
+<body>
+<div id="game-container">
+    <div id="level-select">
+        <h2>Select Difficulty</h2>
+        <button onclick="startGame('easy')">Easy</button>
+        <button onclick="startGame('medium')">Medium</button>
+        <button onclick="startGame('hard')">Hard</button>
+    </div>
+    <div id="game-over" style="display: none;">
+        <h2>Game Over</h2>
+        <p>Your Score: <span id="final-score"></span></p>
+        <button onclick="restartGame()">Restart</button>
+        <button onclick="location.reload()">New Level</button>
+    </div>
+    <div id="score">Score: 0</div>
+    <svg width="100%" height="100%" id="game-area">
+        <line x1="0" y1="500" x2="800" y2="500" stroke="black" stroke-width="2"/>
+        <rect class="key" x="100" y="500" width="50" height="50"/>
+        <rect class="key" x="200" y="500" width="50" height="50"/>
+        <rect class="key" x="300" y="500" width="50" height="50"/>
+        <rect class="key" x="400" y="500" width="50" height="50"/>
+    </svg>
+</div>
+
+<script>
+const keys = ['a', 's', 'd', 'f'];
+const gameArea = document.getElementById('game-area');
+const scoreDisplay = document.getElementById('score');
+const gameContainer = document.getElementById('game-container');
+const levelSelect = document.getElementById('level-select');
+const gameOverScreen = document.getElementById('game-over');
+const finalScore = document.getElementById('final-score');
+let score = 0;
+let gameSpeed = 5; // Default speed, will be adjusted by difficulty
+let notes = [];
+let gameInterval;
+let audioContext, hitSound;
+
+document.addEventListener('keydown', (event) => {
+    if (keys.includes(event.key)) {
+        checkNoteHit(event.key);
+    }
+});
+
+function initAudio() {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const buffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.2, audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+        data[i] = Math.sin(440 * 2 * Math.PI * i / audioContext.sampleRate) * Math.exp(-0.005 * i);
+    }
+    hitSound = buffer;
+}
+
+function playSound(buffer) {
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    source.start(0);
+}
+
+function startGame(difficulty) {
+    switch(difficulty) {
+        case 'easy': gameSpeed = 3; break;
+        case 'medium': gameSpeed = 5; break;
+        case 'hard': gameSpeed = 7; break;
+    }
+    levelSelect.style.display = 'none';
+    score = 0;
+    updateScore();
+    gameInterval = setInterval(gameLoop, 1000 / 60);
+    generateNotes();
+    initAudio();
+}
+
+function restartGame() {
+    gameOverScreen.style.display = 'none';
+    startGame(); // Assuming the difficulty is remembered or set again
+}
+
+function generateNotes() {
+    setInterval(() => {
+        if (Math.random() < 0.8) { // 80% chance to generate a note
+            const note = document.createElementNS("http://www.w3.org/2000/svg", 'circle');
+            note.setAttribute('class', 'note');
+            note.setAttribute('r', '15');
+            note.setAttribute('cx', 125 + Math.floor(Math.random() * 4) * 100);
+            note.setAttribute('cy', '0');
+            gameArea.appendChild(note);
+            notes.push({element: note, key: keys[Math.floor((note.cx.baseVal.value - 100) / 100)]});
+        }
+    }, 1000 / gameSpeed);
+}
+
+function gameLoop() {
+    notes.forEach(note => {
+        let cy = note.element.cy.baseVal.value + gameSpeed;
+        note.element.setAttribute('cy', cy);
+        
+        if (cy > 500 && cy < 520) {
+            // Check for hit here if needed, but we're using keydown for better responsiveness
+        } else if (cy > 520) {
+            missNote(note);
+        }
+    });
+    
+    if (score <= -20) {
+        gameOver();
+    }
+}
+
+function checkNoteHit(key) {
+    const noteToCheck = notes.find(note => 
+        note.key === key && 
+        note.element.cy.baseVal.value >= 500 && 
+        note.element.cy.baseVal.value <= 520
+    );
+    
+    if (noteToCheck) {
+        hitNote(noteToCheck);
+    }
+}
+
+function hitNote(note) {
+    playSound(hitSound);
+    gameArea.removeChild(note.element);
+    notes = notes.filter(n => n !== note);
+    score += 5;
+    updateScore();
+}
+
+function missNote(note) {
+    gameArea.removeChild(note.element);
+    notes = notes.filter(n => n !== note);
+    score -= 5;
+    updateScore();
+}
+
+function gameOver() {
+    clearInterval(gameInterval);
+    gameOverScreen.style.display = 'flex';
+    finalScore.textContent = score;
+    notes.forEach(note => gameArea.removeChild(note.element));
+    notes = [];
+}
+
+function updateScore() {
+    scoreDisplay.textContent = `Score: ${Math.max(score, -20)}`;
+}
+</script>
+</body>
+</html>

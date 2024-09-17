@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rhythm Game</title>
+<style>
+    body, html {
+        height: 100%;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #1a1a1a;
+        font-family: Arial, sans-serif;
+    }
+    #game-area {
+        width: 800px;
+        height: 600px;
+        background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><rect width="100%" height="100%" fill="%232c3e50"/></svg>');
+        position: relative;
+    }
+    .note {
+        width: 40px;
+        height: 20px;
+        position: absolute;
+        background: #3498db;
+        border-radius: 5px;
+    }
+    #score {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        color: white;
+        font-size: 24px;
+    }
+    .key-line {
+        position: absolute;
+        bottom: 100px;
+        width: 100%;
+        height: 2px;
+        background: white;
+    }
+    .key {
+        position: absolute;
+        bottom: 20px;
+        color: white;
+        font-size: 24px;
+    }
+    #keyA { left: 180px; }
+    #keyS { left: 380px; }
+    #keyD { left: 580px; }
+    #keyF { left: 780px; }
+</style>
+</head>
+<body>
+<div id="game-area">
+    <div id="score">Score: 0</div>
+    <div class="key-line"></div>
+    <div id="keyA" class="key">A</div>
+    <div id="keyS" class="key">S</div>
+    <div id="keyD" class="key">D</div>
+    <div id="keyF" class="key">F</div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.1/howler.min.js"></script>
+<script>
+    const gameArea = document.getElementById('game-area');
+    let score = 0;
+    let notes = [];
+    let gameSpeed = 2; // Default to easy
+    let gameActive = false;
+    const keys = { 'a': 180, 's': 380, 'd': 580, 'f': 780 };
+    const hitSound = new Howl({ src: ['path/to/hit.wav'] });
+    const missSound = new Howl({ src: ['path/to/miss.wav'] });
+
+    function createNote() {
+        const note = document.createElement('div');
+        note.className = 'note';
+        note.style.top = '0px';
+        const key = Object.keys(keys)[Math.floor(Math.random() * 4)];
+        note.dataset.key = key;
+        note.style.left = keys[key] + 'px';
+        gameArea.appendChild(note);
+        notes.push({element: note, key: key, y: 0});
+    }
+
+    function gameLoop() {
+        if (!gameActive) return;
+
+        notes.forEach((note, index) => {
+            note.y += gameSpeed;
+            if (note.y > 600) {
+                missNote(note.element);
+            } else {
+                note.element.style.top = note.y + 'px';
+            }
+        });
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    function missNote(noteElement) {
+        score = Math.max(score - 5, -20);
+        updateScore();
+        if (score <= -20) endGame();
+        gameArea.removeChild(noteElement);
+        notes.shift(); // Remove the missed note
+        missSound.play();
+    }
+
+    function hitNote(key) {
+        const noteToHit = notes.find(n => n.key === key && Math.abs(n.y - 500) < 10); // 500 is approx where the line would be
+        if (noteToHit) {
+            score += 5;
+            updateScore();
+            gameArea.removeChild(noteToHit.element);
+            notes = notes.filter(n => n !== noteToHit);
+            hitSound.play();
+        }
+    }
+
+    function updateScore() {
+        document.getElementById('score').innerText = 'Score: ' + score;
+    }
+
+    function endGame() {
+        gameActive = false;
+        alert('Game Over! Your score: ' + score);
+        // Here you would reset or offer level selection again
+    }
+
+    window.addEventListener('keydown', function(e) {
+        if (['a', 's', 'd', 'f'].includes(e.key.toLowerCase()) && gameActive) {
+            hitNote(e.key.toLowerCase());
+        }
+    });
+
+    // Setup level selection and start game logic here
+    // For simplicity, not included in this snippet
+
+    // Start game
+    function startGame() {
+        gameActive = true;
+        setInterval(createNote, 1000 / gameSpeed); // Adjust interval based on speed
+        gameLoop();
+    }
+
+    // Call startGame when ready
+    // startGame();
+</script>
+</body>
+</html>
