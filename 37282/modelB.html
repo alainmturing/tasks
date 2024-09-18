@@ -98,8 +98,8 @@
     }
 
     // Populate sounds and UI
-    ['kick', 'snare', 'hihat', 'clap'].forEach((sound, index) => {
-        loadSound(sound, `https://path-to-your-sounds/${sound}.mp3`); // Replace with actual path
+    ['kick', 'snare'].forEach((sound, index) => {
+        loadSound(sound, `.//${sound}.mp3`); // Replace with actual path
         const pad = document.createElement('button');
         pad.className = 'pad';
         pad.textContent = sound;
@@ -178,8 +178,6 @@
     const info = {
         'kick': 'The kick drum provides the beat’s pulse.',
         'snare': 'The snare drum adds backbeat, typically on beats 2 and 4.',
-        'hihat': 'Hi-hats often play off-beat or create intricate patterns.',
-        'clap': 'Claps can replace or accompany the snare for a different feel.'
     };
 
     for (let [key, value] of Object.entries(info)) {
