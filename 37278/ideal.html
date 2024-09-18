@@ -114,6 +114,7 @@
         let notes = [];
         let audioContext;
         let hitSound, missSound;
+        let isGameOver = false;
 
         function initAudio() {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -140,7 +141,7 @@
             return { hitGain, missGain };
         }
 
-        let { hitGain, missGain } = initAudio();
+        let hitGain, missGain;
 
         function playSound(gainNode) {
             const now = audioContext.currentTime;
@@ -179,6 +180,7 @@
         }
 
         function updateScore(points) {
+            if (isGameOver) return;
             score += points;
             scoreElement.textContent = `Score: ${score}`;
             if (score <= -20) {
@@ -187,13 +189,22 @@
         }
 
         function endGame() {
+            isGameOver = true;
             cancelAnimationFrame(gameLoop);
             gameOver.style.display = 'flex';
         }
 
         function startGame() {
+            if (!audioContext) {
+                const audioSetup = initAudio();
+                hitGain = audioSetup.hitGain;
+                missGain = audioSetup.missGain;
+            }
+            audioContext.resume();
+
             score = 0;
             notes = [];
+            isGameOver = false;
             updateScore(0);
             menu.style.display = 'none';
             gameOver.style.display = 'none';
@@ -235,6 +246,8 @@
         }
 
         function update() {
+            if (isGameOver) return;
+
             if (Math.random() < 0.02) {
                 notes.push(createNote());
             }
@@ -253,6 +266,8 @@
         }
 
         document.addEventListener('keydown', (event) => {
+            if (isGameOver) return;
+
             const key = event.key.toUpperCase();
             const laneIndex = KEYS.indexOf(key);
             if (laneIndex !== -1) {
