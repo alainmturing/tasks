@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beat Maker</title>
+<style>
+body { font-family: 'Arial', sans-serif; background: #2c3e50; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+#beat-maker { width: 90%; max-width: 800px; background: #34495e; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
+.drum-pad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+.drum-pad button { padding: 20px; font-size: 1em; background: #95a5a6; border: none; border-radius: 5px; cursor: pointer; transition: background 0.3s; }
+.drum-pad button.active { background: #3498db; color: white; }
+.timeline { display: grid; grid-template-columns: repeat(16, 1fr); gap: 5px; margin: 20px 0; }
+.step { background: #7f8c8d; height: 30px; border-radius: 3px; cursor: pointer; }
+.step.active { background: #e74c3c; }
+#tempo { width: 100%; }
+.info-card { background: #2c3e50; padding: 10px; margin-top: 10px; border-radius: 5px; }
+</style>
+</head>
+<body>
+
+<div id="beat-maker">
+  <h1>Beat Maker</h1>
+  <div class="drum-pad" id="drum-pad"></div>
+  <div class="timeline" id="timeline"></div>
+  <input type="range" id="tempo" min="60" max="180" value="120">
+  <button onclick="playBeat()">Play</button>
+  <button onclick="stopBeat()">Stop</button>
+  <div class="info-cards" id="info-cards"></div>
+</div>
+
+<script>
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
+let sounds = {};
+let currentSound = null;
+let sequence = new Array(16).fill(null);
+let tempo = 120;
+let intervalId = null;
+let currentStep = 0;
+
+// Fetch sounds
+const soundUrls = {
+  'kick': 'path/to/kick.wav',
+  'snare': 'path/to/snare.wav',
+  // Add more sounds here
+};
+
+async function loadSounds() {
+  for (let [key, url] of Object.entries(soundUrls)) {
+    const response = await fetch(url);
+    const arrayBuffer = await response.arrayBuffer();
+    ctx.decodeAudioData(arrayBuffer, buffer => {
+      sounds[key] = buffer;
+    });
+  }
+}
+
+function playSound(buffer) {
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(ctx.destination);
+  source.start(0);
+}
+
+function createDrumPad() {
+  const pad = document.getElementById('drum-pad');
+  Object.keys(sounds).forEach(sound => {
+    const btn = document.createElement('button');
+    btn.textContent = sound;
+    btn.onclick = () => {
+      currentSound = sound;
+      document.querySelectorAll('.drum-pad button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      playSound(sounds[sound]);
+    };
+    pad.appendChild(btn);
+  });
+}
+
+function createTimeline() {
+  const timeline = document.getElementById('timeline');
+  sequence.forEach((_, i) => {
+    const step = document.createElement('div');
+    step.className = 'step';
+    step.onclick = () => {
+      sequence[i] = currentSound;
+      step.classList.toggle('active', currentSound);
+    };
+    timeline.appendChild(step);
+  });
+}
+
+function playBeat() {
+  if (intervalId) return;
+  const interval = (60 / tempo) * 1000 / 4; // 4 because we're dealing with 16th notes
+  intervalId = setInterval(() => {
+    const step = document.querySelectorAll('.step')[currentStep];
+    step.style.opacity = '0.5';
+    if (sequence[currentStep]) {
+      playSound(sounds[sequence[currentStep]]);
+    }
+    setTimeout(() => {
+      step.style.opacity = '1';
+    }, interval / 2);
+    currentStep = (currentStep + 1) % 16;
+  }, interval);
+}
+
+function stopBeat() {
+  if (intervalId) {
+    clearInterval(intervalId);
+    intervalId = null;
+    currentStep = 0;
+  }
+}
+
+document.getElementById('tempo').oninput = function() {
+  tempo = this.value;
+  if (intervalId) {
+    stopBeat();
+    playBeat();
+  }
+};
+
+function createInfoCards() {
+  const infoCards = document.getElementById('info-cards');
+  for (let sound in soundUrls) {
+    const card = document.createElement('div');
+    card.className = 'info-card';
+    card.textContent = `${sound}: Typically used for...`; // Expand this description
+    infoCards.appendChild(card);
+  }
+}
+
+// Initialization
+loadSounds().then(() => {
+  createDrumPad();
+  createTimeline();
+  createInfoCards();
+});
+</script>
+</body>
+</html>
