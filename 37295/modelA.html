@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Music Theory Widget</title>
+<style>
+body { font-family: 'Arial', sans-serif; background: #f4f4f9; margin: 0; padding: 20px; }
+#app { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+.keyboard { display: flex; justify-content: center; margin-bottom: 20px; }
+.key { width: 40px; height: 120px; background: white; border: 1px solid #000; margin: 0 -1px; position: relative; }
+.key.black { height: 80px; background: #000; width: 24px; margin: 0 -12px; z-index: 2; }
+.key span { position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%); }
+.staff { border: 1px solid #ccc; height: 100px; margin: 20px 0; position: relative; }
+.note { width: 20px; height: 20px; background: #3498db; border-radius: 50%; position: absolute; cursor: move; }
+#controls, #earTraining { margin-top: 20px; text-align: center; }
+button { padding: 10px; margin: 5px; cursor: pointer; }
+#result { margin-top: 10px; font-weight: bold; }
+.correct { color: green; }
+.incorrect { color: red; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <h1>Music Theory Widget</h1>
+  
+  <!-- Piano Keyboard -->
+  <div class="keyboard" id="piano">
+    <!-- Piano keys will be dynamically added here -->
+  </div>
+
+  <!-- Music Staff -->
+  <div class="staff" id="staff">
+    <!-- Notes will be placed here -->
+  </div>
+
+  <!-- Controls -->
+  <div id="controls">
+    <button onclick="playMelody()">Play Melody</button>
+    <button onclick="clearStaff()">Clear Staff</button>
+  </div>
+
+  <!-- Ear Training -->
+  <div id="earTraining">
+    <h3>Ear Training</h3>
+    <button onclick="startEarTraining()">Start Interval Training</button>
+    <div id="result"></div>
+  </div>
+</div>
+
+<script>
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
+let currentOscillator = null;
+
+const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const frequencies = [261.63, 277.18, 293.66, 311.13, 329.63, 349.23, 369.99, 392.00, 415.30, 440.00, 466.16, 493.88];
+let melody = [];
+
+function createKeyboard() {
+    const piano = document.getElementById('piano');
+    notes.forEach((note, index) => {
+        const key = document.createElement('div');
+        key.className = `key ${note.includes('#') ? 'black' : ''}`;
+        key.id = `key-${note}`;
+        key.innerHTML = `<span>${note}</span>`;
+        key.onmousedown = () => playNote(index);
+        key.onmouseup = () => stopNote();
+        piano.appendChild(key);
+    });
+}
+
+function playNote(freqIndex) {
+    if (currentOscillator) stopNote();
+    currentOscillator = ctx.createOscillator();
+    currentOscillator.type = 'sine';
+    currentOscillator.frequency.setValueAtTime(frequencies[freqIndex], ctx.currentTime);
+    currentOscillator.connect(ctx.destination);
+    currentOscillator.start();
+}
+
+function stopNote() {
+    if (currentOscillator) {
+        currentOscillator.stop();
+        currentOscillator.disconnect();
+        currentOscillator = null;
+    }
+}
+
+function playMelody() {
+    let time = ctx.currentTime;
+    melody.forEach((note, index) => {
+        const osc = ctx.createOscillator();
+        osc.frequency.setValueAtTime(frequencies[notes.indexOf(note.note)], time);
+        osc.connect(ctx.destination);
+        osc.start(time);
+        osc.stop(time + 0.5);
+        time += 0.5;
+    });
+}
+
+function clearStaff() {
+    melody = [];
+    document.getElementById('staff').innerHTML = '';
+}
+
+function startEarTraining() {
+    const intervalNotes = [Math.floor(Math.random() * 12), Math.floor(Math.random() * 12)];
+    const interval = Math.abs(intervalNotes[0] - intervalNotes[1]);
+    const intervals = ['Unison', 'Minor 2nd', 'Major 2nd', 'Minor 3rd', 'Major 3rd', 'Perfect 4th', 'Tritone', 'Perfect 5th', 'Minor 6th', 'Major 6th', 'Minor 7th', 'Major 7th', 'Octave'];
+    
+    playInterval(intervalNotes);
+    
+    const resultDiv = document.getElementById('result');
+    resultDiv.innerHTML = intervals.map((name, idx) => 
+        `<button onclick="checkAnswer(${idx})">${name}</button>`
+    ).join('');
+}
+
+function playInterval(notes) {
+    const time = ctx.currentTime;
+    const playNote = (note, delay) => {
+        const osc = ctx.createOscillator();
+        osc.frequency.setValueAtTime(frequencies[note], time + delay);
+        osc.connect(ctx.destination);
+        osc.start(time + delay);
+        osc.stop(time + delay + 0.5);
+    };
+    playNote(notes[0], 0);
+    playNote(notes[1], 0.6);
+}
+
+function checkAnswer(answer) {
+    const correct = answer;
+    const buttons = document.getElementById('result').children;
+    for(let i = 0; i < buttons.length; i++) {
+        buttons[i].disabled = true;
+        if(i === correct) {
+            buttons[i].classList.add('correct');
+        } else if(i === answer) {
+            buttons[i].classList.add('incorrect');
+        }
+    }
+    setTimeout(() => {
+        for(let button of buttons) {
+            button.classList.remove('correct', 'incorrect');
+            button.disabled = false;
+        }
+    }, 1500);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    createKeyboard();
+    const staff = document.getElementById('staff');
+    staff.addEventListener('click', (e) => {
+        const rect = staff.getBoundingClientRect();
+        const y = e.clientY - rect.top;
+        const noteIndex = Math.floor((y / rect.height) * 12);
+        const note = notes[11 - noteIndex]; // invert because staff is top-down
+        const noteDiv = document.createElement('div');
+        noteDiv.className = 'note';
+        noteDiv.style.top = `${y}px`;
+        noteDiv.onclick = () => {
+            playNote(11 - noteIndex);
+            melody.push({note, time: Date.now()});
+        };
+        staff.appendChild(noteDiv);
+    });
+});
+</script>
+
+</body>
+</html>
