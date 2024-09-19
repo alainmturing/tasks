@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rhythm Game</title>
+<style>
+    body {
+        background-color: #1a1a1a;
+        color: #fff;
+        font-family: 'Arial', sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+    }
+    #game-container {
+        text-align: center;
+        width: 800px;
+    }
+    .level-select, #game-area {
+        margin-bottom: 20px;
+    }
+    #score {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 20px;
+    }
+    .note-line {
+        stroke: white;
+        stroke-width: 2;
+    }
+    .note {
+        transition: transform 0.5s linear;
+    }
+    #keys div {
+        display: inline-block;
+        width: 50px;
+        height: 50px;
+        background: #333;
+        margin: 0 10px;
+        line-height: 50px;
+        border-radius: 5px;
+        font-weight: bold;
+    }
+</style>
+</head>
+<body>
+<div id="game-container">
+    <div class="level-select">
+        <button onclick="startGame('easy')">Easy</button>
+        <button onclick="startGame('medium')">Medium</button>
+        <button onclick="startGame('hard')">Hard</button>
+    </div>
+    <div id="score">Score: 0</div>
+    <svg id="game-area" width="800" height="600"></svg>
+    <div id="keys">
+        <div>A</div>
+        <div>S</div>
+        <div>D</div>
+        <div>F</div>
+    </div>
+</div>
+
+<script>
+    const svgNS = "http://www.w3.org/2000/svg";
+    let gameSpeed = 500; // Default to medium for example
+    let score = 0;
+    let gameInterval;
+    let notes = [];
+    
+    function startGame(level) {
+        document.querySelector('.level-select').style.display = 'none';
+        switch(level) {
+            case 'easy': gameSpeed = 700; break;
+            case 'medium': gameSpeed = 500; break;
+            case 'hard': gameSpeed = 300; break;
+        }
+        startPlaying();
+    }
+
+    function startPlaying() {
+        document.addEventListener('keydown', handleKeyPress);
+        gameInterval = setInterval(dropNote, gameSpeed);
+    }
+
+    function dropNote() {
+        const noteTypes = ['square', 'circle', 'triangle', 'diamond'];
+        const note = document.createElementNS(svgNS, 'rect');
+        const type = noteTypes[Math.floor(Math.random() * noteTypes.length)];
+        note.setAttribute('class', 'note ' + type);
+        note.setAttribute('x', [50, 250, 450, 650][Math.floor(Math.random() * 4)]);
+        note.setAttribute('y', '0');
+        note.setAttribute('width', '40');
+        note.setAttribute('height', '40');
+        document.getElementById('game-area').appendChild(note);
+        notes.push({element: note, y: 0, hit: false});
+    }
+
+    function gameLoop() {
+        notes.forEach((note, index) => {
+            let y = note.y + 1;
+            note.y = y;
+            note.element.setAttribute('y', y);
+            if (y > 550) { // Assuming 550 is where the hit line is
+                if (!note.hit) {
+                    updateScore(-5);
+                }
+                document.getElementById('game-area').removeChild(note.element);
+                notes.splice(index, 1);
+            }
+        });
+        if (score <= -20) endGame();
+    }
+
+    function handleKeyPress(e) {
+        const key = e.key.toUpperCase();
+        if(['A', 'S', 'D', 'F'].includes(key)) {
+            checkNoteHit(key);
+        }
+    }
+
+    function checkNoteHit(key) {
+        const keyIndex = ['A', 'S', 'D', 'F'].indexOf(key);
+        const hitNote = notes.find(n => Math.abs(n.y - 550) < 10 && n.element.getAttribute('x') == [50, 250, 450, 650][keyIndex]);
+        if (hitNote) {
+            hitNote.hit = true;
+            document.getElementById('game-area').removeChild(hitNote.element);
+            notes = notes.filter(n => n !== hitNote);
+            updateScore(5);
+            // Play hit sound
+        } else {
+            updateScore(-5);
+            // Play miss sound
+        }
+    }
+
+    function updateScore(points) {
+        score += points;
+        document.getElementById('score').textContent = 'Score: ' + score;
+    }
+
+    function endGame() {
+        clearInterval(gameInterval);
+        alert('Game Over! Your score: ' + score);
+        // Reset game or show level selection again
+        document.querySelector('.level-select').style.display = 'block';
+        score = 0;
+        document.getElementById('score').textContent = 'Score: 0';
+        notes.forEach(n => document.getElementById('game-area').removeChild(n.element));
+        notes = [];
+        document.removeEventListener('keydown', handleKeyPress);
+    }
+
+    // Setup the game area
+    const gameArea = document.getElementById('game-area');
+    const line = document.createElementNS(svgNS, 'line');
+    line.setAttribute('x1', '0');
+    line.setAttribute('y1', '550');
+    line.setAttribute('x2', '800');
+    line.setAttribute('y2', '550');
+    line.setAttribute('class', 'note-line');
+    gameArea.appendChild(line);
+
+    setInterval(gameLoop, 10);
+</script>
+</body>
+</html>

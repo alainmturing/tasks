@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rhythm Game</title>
+<style>
+    body { 
+        font-family: 'Arial', sans-serif; 
+        background: #f0f0f0; 
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+    }
+    #gameArea {
+        background: white;
+        border: 2px solid #333;
+        position: relative;
+        width: 800px;
+        height: 600px;
+        overflow: hidden;
+    }
+    .keyLine {
+        position: absolute;
+        bottom: 100px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: red;
+    }
+    .note {
+        position: absolute;
+        width: 50px;
+        height: 50px;
+    }
+    #score {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 24px;
+        color: #333;
+    }
+    #startScreen, #endScreen {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.9);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+    }
+    button {
+        padding: 10px 20px;
+        margin: 10px;
+        font-size: 16px;
+        cursor: pointer;
+    }
+</style>
+</head>
+<body>
+<div id="gameArea">
+    <div id="startScreen">
+        <h2>Choose Difficulty</h2>
+        <button onclick="startGame('easy')">Easy</button>
+        <button onclick="startGame('medium')">Medium</button>
+        <button onclick="startGame('hard')">Hard</button>
+    </div>
+    <div id="endScreen" style="display:none;">
+        <h2>Game Over</h2>
+        <p>Your Score: <span id="finalScore"></span></p>
+        <button onclick="restartGame()">Restart</button>
+        <button onclick="location.reload()">Choose Level</button>
+    </div>
+    <div id="score">Score: 0</div>
+    <div class="keyLine"></div>
+</div>
+
+<script>
+let score = 0;
+let gameInterval;
+let notes = [];
+const keys = { 'a': 0, 's': 1, 'd': 2, 'f': 3 };
+let speed = 2; // Default speed, will be set by difficulty
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+const gainNode = audioContext.createGain();
+gainNode.connect(audioContext.destination);
+
+function startGame(difficulty) {
+    document.getElementById('startScreen').style.display = 'none';
+    score = 0;
+    updateScore();
+    switch(difficulty) {
+        case 'easy': speed = 1; break;
+        case 'medium': speed = 2; break;
+        case 'hard': speed = 3; break;
+    }
+    gameInterval = setInterval(spawnNote, 1500 / speed);
+    window.addEventListener('keydown', checkKey);
+}
+
+function restartGame() {
+    document.getElementById('endScreen').style.display = 'none';
+    startGame(); // This assumes the difficulty level persists; adjust if needed.
+}
+
+function spawnNote() {
+    const noteType = ['a', 's', 'd', 'f'][Math.floor(Math.random() * 4)];
+    const note = document.createElement('div');
+    note.className = 'note';
+    note.style.left = `${keys[noteType] * 200 + 75}px`;
+    note.style.top = '0px';
+    note.dataset.type = noteType;
+    document.getElementById('gameArea').appendChild(note);
+    notes.push({element: note, type: noteType});
+}
+
+function moveNotes() {
+    notes.forEach((note, index) => {
+        const top = parseInt(note.element.style.top) || 0;
+        if (top > 600) {
+            missNote(note);
+        } else {
+            note.element.style.top = `${top + speed}px`;
+        }
+    });
+}
+
+function checkKey(e) {
+    if (['a', 's', 'd', 'f'].includes(e.key)) {
+        const keyPressed = e.key;
+        const hitNote = notes.find(note => 
+            Math.abs(parseInt(note.element.style.top) - 500) < 10 && note.type === keyPressed
+        );
+        if (hitNote) {
+            hitNote(hitNote);
+        } else {
+            missNote(null, keyPressed);
+        }
+    }
+}
+
+function hitNote(note) {
+    playSound();
+    document.getElementById('gameArea').removeChild(note.element);
+    notes = notes.filter(n => n !== note);
+    score += 5;
+    updateScore();
+}
+
+function missNote(note, keyPressed = null) {
+    if (note) {
+        document.getElementById('gameArea').removeChild(note.element);
+        notes = notes.filter(n => n !== note);
+    }
+    score -= 5;
+    updateScore();
+    if (score <= -20) endGame();
+}
+
+function playSound() {
+    const oscillator = audioContext.createOscillator();
+    oscillator.connect(gainNode);
+    oscillator.type = 'square';
+    oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.1);
+    gainNode.gain.setValueAtTime(1, audioContext.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.1);
+}
+
+function updateScore() {
+    document.getElementById('score').innerText = `Score: ${score}`;
+}
+
+function endGame() {
+    clearInterval(gameInterval);
+    window.removeEventListener('keydown', checkKey);
+    document.getElementById('finalScore').innerText = score;
+    document.getElementById('endScreen').style.display = 'flex';
+}
+
+setInterval(moveNotes, 50);
+</script>
+</body>
+</html>
