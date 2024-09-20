@@ -1,0 +1,698 @@
+# Interactive Math Tutor: Development Plan and Implementation Notes
+
+## Development Plan
+
+1. **Structure and Setup**
+   - Create a single HTML file to house all components
+   - Embed CSS for styling within a `<style>` tag in the `<head>`
+   - Include JavaScript at the end of the `<body>` for functionality
+
+2. **External Libraries**
+   - Integrate Bootstrap via CDN for responsive design and basic styling
+   - Include Chart.js via CDN for interactive visualizations (pie charts and bar models)
+
+3. **Layout Design**
+   - Implement a navigation bar for switching between sections (Tutorials, Exercises, Quizzes, Progress)
+   - Create distinct sections for each content area
+   - Ensure responsive design for various screen sizes
+
+4. **Functionality Implementation**
+   - Tutorials Section:
+     - Develop static content with explanations and examples
+     - Create interactive elements for fraction/decimal/percentage conversions
+   - Exercises Section:
+     - Implement input fields for user answers
+     - Develop checking logic with immediate feedback
+     - Create visual representations that update based on user input
+   - Quizzes Section:
+     - Design a set of multiple-choice questions
+     - Implement quiz logic with scoring
+     - Add a progress indicator for quiz completion
+   - Progress Tracking:
+     - Develop a system to track completed exercises and quiz scores
+     - Create a visual representation of overall progress
+
+5. **Interactivity and User Experience**
+   - Implement navigation logic to switch between sections
+   - Create functions to update charts and visual elements based on user input
+   - Develop feedback mechanisms for exercises and quizzes
+
+6. **Styling and Polish**
+   - Apply consistent styling across all sections
+   - Ensure visual feedback for user interactions (hover states, active states)
+   - Implement transitions for smooth user experience
+
+## HTML Code
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Interactive Math Tutor: Fractions & Decimals</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* Reset and basic styling */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background-color: #f0f4f8;
+            color: #333;
+            line-height: 1.6;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            background-color: #3498db;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        nav {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        nav button {
+            padding: 12px 24px;
+            border: none;
+            background-color: #2ecc71;
+            color: white;
+            cursor: pointer;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            font-size: 1em;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        nav button:hover, nav button.active {
+            background-color: #27ae60;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        section {
+            display: none;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        section.active {
+            display: block;
+        }
+        /* Tutorials */
+        .tutorial {
+            margin-bottom: 30px;
+        }
+        .tutorial h2 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        .tutorial p {
+            margin-bottom: 15px;
+        }
+        /* Updated styles for visualizations */
+        .visuals {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        .visuals div {
+            flex: 1 1 300px;
+            text-align: center;
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        .visuals div:hover {
+            transform: translateY(-5px);
+        }
+        svg {
+            width: 100%;
+            height: auto;
+            max-width: 250px;
+            margin-bottom: 20px;
+        }
+        #pieChart circle {
+            stroke: #e0e0e0;
+            stroke-width: 5;
+        }
+        #pieSlice {
+            transition: d 0.3s ease;
+        }
+        #barModel rect:first-child {
+            fill: #e0e0e0;
+        }
+        #barFill {
+            transition: width 0.3s ease;
+        }
+        .visuals input[type="text"] {
+            padding: 10px;
+            width: calc(100% - 22px);
+            max-width: 200px;
+            margin-bottom: 10px;
+            border: 2px solid #bdc3c7;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        
+        /* Updated button styles */
+        button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #3498db;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s, transform 0.1s;
+            font-size: 1em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        button:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        nav button {
+            background-color: #2ecc71;
+        }
+        nav button:hover, nav button.active {
+            background-color: #27ae60;
+        }
+        #submitQuizBtn, #nextQuizBtn {
+            margin-top: 15px;
+        }
+        #resetProgressBtn {
+            background-color: #e74c3c;
+            margin-top: 20px;
+        }
+        #resetProgressBtn:hover {
+            background-color: #c0392b;
+        }
+        /* Exercises */
+        .exercise {
+            margin-bottom: 30px;
+            background-color: #ecf0f1;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .exercise h3 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        .exercise input[type="text"], .exercise input[type="number"] {
+            padding: 10px;
+            width: 100%;
+            max-width: 200px;
+            margin-right: 10px;
+            border: 2px solid #bdc3c7;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        .exercise button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #3498db;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            font-size: 1em;
+        }
+        .exercise button:hover {
+            background-color: #2980b9;
+        }
+        .feedback {
+            margin-top: 15px;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .feedback.correct {
+            background-color: #2ecc71;
+            color: white;
+        }
+        .feedback.incorrect {
+            background-color: #e74c3c;
+            color: white;
+        }
+        /* Quizzes */
+        .quiz-question {
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            color: #2c3e50;
+        }
+        .quiz-options {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 20px;
+        }
+        .quiz-options li {
+            margin-bottom: 15px;
+        }
+        .quiz-options label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 10px;
+            background-color: #ecf0f1;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .quiz-options label:hover {
+            background-color: #bdc3c7;
+        }
+        .quiz-options input {
+            margin-right: 15px;
+        }
+        .quiz-feedback {
+            margin-top: 15px;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        /* Progress */
+        .progress {
+            margin-top: 30px;
+            font-size: 1.1em;
+            background-color: #ecf0f1;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .progress h2 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        .progress-bar {
+            background-color: #ecf0f1;
+            height: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background-color: #3498db;
+            transition: width 0.5s ease-in-out;
+        }
+        /* Responsive */
+        @media (max-width: 768px) {
+            .visuals {
+                flex-direction: column;
+            }
+            nav button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Interactive Math Tutor</h1>
+        <p>Master Fractions and Decimals with Interactive Tools</p>
+    </header>
+
+    <nav>
+        <button class="nav-btn active" data-target="tutorial">Tutorials</button>
+        <button class="nav-btn" data-target="exercises">Exercises</button>
+        <button class="nav-btn" data-target="quizzes">Quizzes</button>
+        <button class="nav-btn" data-target="progress">Progress</button>
+    </nav>
+
+    <section id="tutorial" class="active">
+        <div class="tutorial">
+            <h2>Understanding Fractions</h2>
+            <p>A fraction represents a part of a whole. It consists of a numerator (top number) and a denominator (bottom number).</p>
+            <div class="visuals">
+                <div>
+                    <h3>Pie Chart</h3>
+                    <svg id="pieChart" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" stroke="#3498db" stroke-width="10" fill="none"></circle>
+                        <path id="pieSlice" d="" fill="#2ecc71"></path>
+                        <text x="50" y="55" text-anchor="middle" fill="#2c3e50" font-size="20" font-weight="bold">0/1</text>
+                    </svg>
+                    <div>
+                        <label for="pieInput">Enter a fraction (e.g., 3/4):</label>
+                        <input type="text" id="pieInput" placeholder="e.g., 3/4">
+                        <button onclick="updatePieChart()">Update</button>
+                    </div>
+                </div>
+                <div>
+                    <h3>Bar Model</h3>
+                    <svg id="barModel" viewBox="0 0 100 20">
+                        <rect x="0" y="0" width="100" height="20" fill="#ecf0f1"></rect>
+                        <rect id="barFill" x="0" y="0" width="0" height="20" fill="#3498db"></rect>
+                        <text x="50" y="15" text-anchor="middle" fill="#2c3e50" font-size="10" font-weight="bold">0/1</text>
+                    </svg>
+                    <div>
+                        <label for="barInput">Enter a fraction (e.g., 2/5):</label>
+                        <input type="text" id="barInput" placeholder="e.g., 2/5">
+                        <button onclick="updateBarModel()">Update</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="tutorial">
+            <h2>Converting Fractions, Decimals, and Percentages</h2>
+            <p>Understanding the relationship between fractions, decimals, and percentages is crucial. Here's a step-by-step guide:</p>
+            <ol>
+                <li><strong>Fraction to Decimal:</strong> Divide the numerator by the denominator.
+                    <br>Example: 3/4 = 3 ÷ 4 = 0.75</li>
+                <li><strong>Decimal to Percentage:</strong> Multiply the decimal by 100 and add the % symbol.
+                    <br>Example: 0.75 × 100 = 75%</li>
+                <li><strong>Percentage to Fraction:</strong> Write the percentage over 100 and simplify if possible.
+                    <br>Example: 75% = 75/100 = 3/4 (simplified)</li>
+                <li><strong>Decimal to Fraction:</strong> Write the decimal as a fraction over a power of 10, then simplify.
+                    <br>Example: 0.75 = 75/100 = 3/4 (simplified)</li>
+                <li><strong>Percentage to Decimal:</strong> Divide the percentage by 100.
+                    <br>Example: 75% = 75 ÷ 100 = 0.75</li>
+                <li><strong>Fraction to Percentage:</strong> Divide the numerator by the denominator, then multiply by 100.
+                    <br>Example: 3/4 = (3 ÷ 4) × 100 = 0.75 × 100 = 75%</li>
+            </ol>
+            <p>Practice these conversions to become fluent in moving between different representations of numbers!</p>
+        </div>
+    </section>
+
+    <section id="exercises">
+        <div class="exercise">
+            <h3>Convert Fraction to Decimal</h3>
+            <p>Convert 3/8 to a decimal:</p>
+            <input type="text" id="fracToDec" placeholder="Enter decimal">
+            <button onclick="checkFracToDec()">Submit</button>
+            <div id="fracToDecFeedback" class="feedback"></div>
+        </div>
+        <div class="exercise">
+            <h3>Convert Decimal to Percentage</h3>
+            <p>Convert 0.65 to a percentage:</p>
+            <input type="text" id="decToPerc" placeholder="Enter percentage">
+            <button onclick="checkDecToPerc()">Submit</button>
+            <div id="decToPercFeedback" class="feedback"></div>
+        </div>
+        <div class="exercise">
+            <h3>Convert Percentage to Fraction</h3>
+            <p>Convert 80% to a fraction (simplify if possible):</p>
+            <input type="text" id="percToFrac" placeholder="Enter fraction">
+            <button onclick="checkPercToFrac()">Submit</button>
+            <div id="percToFracFeedback" class="feedback"></div>
+        </div>
+    </section>
+
+    <section id="quizzes">
+        <div id="quizContainer">
+            <h2>Quiz</h2>
+            <div id="quizQuestion" class="quiz-question"></div>
+            <ul id="quizOptions" class="quiz-options"></ul>
+            <button id="submitQuizBtn" onclick="submitQuizAnswer()">Submit Answer</button>
+            <button id="nextQuizBtn" onclick="loadNextQuiz()" style="display:none;">Next Question</button>
+            <div id="quizFeedback" class="quiz-feedback"></div>
+        </div>
+    </section>
+
+    <section id="progress">
+        <div class="progress">
+            <h2>Your Progress</h2>
+            <h3>Exercises</h3>
+            <p>Completed: <span id="exercisesCompleted">0</span> / 3</p>
+            <h3>Quizzes</h3>
+            <p>Correct: <span id="quizzesCorrect">0</span> / <span id="quizzesAttempted">0</span></p>
+            
+            <button onclick="resetProgress()" style="margin-top: 20px; padding: 10px 20px; background-color:#e74c3c; color:white; border:none; border-radius:5px; cursor:pointer;">Reset Progress</button>
+        </div>
+    </section>
+
+    <script>
+        // Navigation
+        const navButtons = document.querySelectorAll('.nav-btn');
+        const sections = document.querySelectorAll('section');
+
+        navButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                navButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                sections.forEach(sec => sec.classList.remove('active'));
+                document.getElementById(btn.dataset.target).classList.add('active');
+            });
+        });
+
+        // Visual Representations
+        function updatePieChart() {
+            const input = document.getElementById('pieInput').value;
+            updateFractionVisual(input, 'pieChart', 'pieSlice');
+        }
+
+        function updateBarModel() {
+            const input = document.getElementById('barInput').value;
+            updateFractionVisual(input, 'barModel', 'barFill');
+        }
+
+        function updateFractionVisual(input, svgId, elementId) {
+            const [numerator, denominator] = input.split('/').map(Number);
+            if (isNaN(numerator) || isNaN(denominator) || denominator === 0) {
+                alert('Please enter a valid fraction (e.g., 3/4)');
+                return;
+            }
+
+            const fraction = numerator / denominator;
+            const percentage = fraction * 100;
+
+            if (svgId === 'pieChart') {
+                const pieSlice = document.getElementById(elementId);
+                const endAngle = (percentage / 100) * 360;
+                const largeArc = endAngle > 180 ? 1 : 0;
+                const x = 50 + 45 * Math.cos((endAngle - 90) * (Math.PI / 180));
+                const y = 50 + 45 * Math.sin((endAngle - 90) * (Math.PI / 180));
+                const d = `M50,50 L50,5 A45,45 0 ${largeArc} 1 ${x},${y} Z`;
+                pieSlice.setAttribute('d', d);
+            } else if (svgId === 'barModel') {
+                const barFill = document.getElementById(elementId);
+                barFill.setAttribute('width', percentage);
+            }
+
+            const textElement = document.querySelector(`#${svgId} text`);
+            textElement.textContent = `${numerator}/${denominator}`;
+        }
+
+        // Exercises
+        let exercisesCompleted = 0;
+
+        function checkFracToDec() {
+            const userInput = document.getElementById('fracToDec').value.trim();
+            const feedback = document.getElementById('fracToDecFeedback');
+            if (parseFloat(userInput) === 0.375) {
+                feedback.textContent = 'Correct! 3/8 = 0.375';
+                feedback.className = 'feedback correct';
+                exercisesCompleted++;
+                document.getElementById('fracToDec').disabled = true;
+            } else {
+                feedback.textContent = 'Incorrect. Try again. Hint: Divide 3 by 8.';
+                feedback.className = 'feedback incorrect';
+            }
+            updateProgressDisplay();
+        }
+
+        function checkDecToPerc() {
+            const userInput = document.getElementById('decToPerc').value.trim();
+            const feedback = document.getElementById('decToPercFeedback');
+            if (parseFloat(userInput) === 65) {
+                feedback.textContent = 'Correct! 0.65 = 65%';
+                feedback.className = 'feedback correct';
+                exercisesCompleted++;
+                document.getElementById('decToPerc').disabled = true;
+            } else {
+                feedback.textContent = 'Incorrect. Try again. Hint: Multiply 0.65 by 100.';
+                feedback.className = 'feedback incorrect';
+            }
+            updateProgressDisplay();
+        }
+
+        function checkPercToFrac() {
+            const userInput = document.getElementById('percToFrac').value.trim().toLowerCase();
+            const feedback = document.getElementById('percToFracFeedback');
+            if (userInput === '4/5' || userInput === '80/100') {
+                feedback.textContent = 'Correct! 80% = 4/5 (simplified) or 80/100';
+                feedback.className = 'feedback correct';
+                exercisesCompleted++;
+                document.getElementById('percToFrac').disabled = true;
+            } else {
+                feedback.textContent = 'Incorrect. Try again. Hint: 80% = 80/100, then simplify if possible.';
+                feedback.className = 'feedback incorrect';
+            }
+            updateProgressDisplay();
+        }
+
+        // Quizzes
+        const quizQuestions = [
+            {
+                question: "What is 2/3 as a decimal?",
+                options: ["0.33", "0.66", "0.67", "0.75"],
+                answer: "0.67"
+            },
+            {
+                question: "Convert 0.25 to a percentage.",
+                options: ["2.5%", "25%", "250%", "0.25%"],
+                answer: "25%"
+            },
+            {
+                question: "Which fraction is equivalent to 75%?",
+                options: ["3/4", "4/3", "7/5", "5/7"],
+                answer: "3/4"
+            },
+            {
+                question: "What is 5/8 as a percentage?",
+                options: ["62.5%", "58%", "65%", "55.5%"],
+                answer: "62.5%"
+            },
+            {
+                question: "Convert 0.8 to a simplified fraction.",
+                options: ["4/5", "8/10", "1/8", "5/8"],
+                answer: "4/5"
+            }
+        ];
+
+        let currentQuiz = 0;
+        let quizzesAttempted = 0;
+        let quizzesCorrect = 0;
+
+        function loadNextQuiz() {
+            if (currentQuiz >= quizQuestions.length) {
+                alert('Quiz Completed!');
+                document.getElementById('quizContainer').innerHTML = '<h2>Quiz Completed!</h2><p>Great job! You\'ve finished all the questions.</p>';
+                return;
+            }
+            const quiz = quizQuestions[currentQuiz];
+            document.getElementById('quizQuestion').textContent = quiz.question;
+            const optionsList = document.getElementById('quizOptions');
+            optionsList.innerHTML = '';
+            quiz.options.forEach((option, index) => {
+                optionsList.innerHTML += `
+                    <li>
+                        <label>
+                            <input type="radio" name="quizOption" value="${option}">
+                            ${option}
+                        </label>
+                    </li>
+                `;
+            });
+            document.getElementById('quizFeedback').textContent = '';
+            document.getElementById('submitQuizBtn').style.display = 'inline-block';
+            document.getElementById('nextQuizBtn').style.display = 'none';
+        }
+
+        function submitQuizAnswer() {
+            const selected = document.querySelector('input[name="quizOption"]:checked');
+            if (!selected) {
+                alert('Please select an answer.');
+                return;
+            }
+            const userAnswer = selected.value;
+            const quiz = quizQuestions[currentQuiz];
+            const feedback = document.getElementById('quizFeedback');
+            if (userAnswer === quiz.answer) {
+                feedback.textContent = 'Correct!';
+                feedback.className = 'quiz-feedback correct';
+                quizzesCorrect++;
+            } else {
+                feedback.textContent = `Incorrect. The correct answer is ${quiz.answer}.`;
+                feedback.className = 'quiz-feedback incorrect';
+            }
+            quizzesAttempted++;
+            document.getElementById('submitQuizBtn').style.display = 'none';
+            document.getElementById('nextQuizBtn').style.display = 'inline-block';
+            currentQuiz++;
+            updateProgressDisplay();
+        }
+
+        // Progress Tracking
+        function updateProgressDisplay() {
+            document.getElementById('exercisesCompleted').textContent = exercisesCompleted;
+            document.getElementById('quizzesCorrect').textContent = quizzesCorrect;
+            document.getElementById('quizzesAttempted').textContent = quizzesAttempted;
+
+            const exerciseProgress = (exercisesCompleted / 3) * 100;
+            const quizProgress = (quizzesAttempted > 0) ? (quizzesCorrect / quizQuestions.length) * 100 : 0;
+        }
+
+        function resetProgress() {
+            if(confirm('Are you sure you want to reset your progress? This will clear all your exercise and quiz results.')) {
+                exercisesCompleted = 0;
+                quizzesCorrect = 0;
+                quizzesAttempted = 0;
+                currentQuiz = 0;
+                
+                // Reset exercises
+                document.getElementById('fracToDec').value = '';
+                document.getElementById('decToPerc').value = '';
+                document.getElementById('percToFrac').value = '';
+                document.getElementById('fracToDecFeedback').textContent = '';
+                document.getElementById('decToPercFeedback').textContent = '';
+                document.getElementById('percToFracFeedback').textContent = '';
+                document.getElementById('fracToDec').disabled = false;
+                document.getElementById('decToPerc').disabled = false;
+                document.getElementById('percToFrac').disabled = false;
+
+                // Reset quizzes
+                loadNextQuiz();
+
+                updateProgressDisplay();
+            }
+        }
+
+        // Initialize
+        window.onload = function() {
+            updateProgressDisplay();
+            loadNextQuiz();
+        };
+    </script>
+
+</body>
+</html>
+```
+## Implementation Notes
+
+- **Single File Structure**: Entire app in one HTML file. Good for simplicity, challenging for larger projects.
+
+- **Responsive Design**: Uses custom CSS with media queries. Works on various devices, but test thoroughly.
+
+- **Visualizations**: Custom SVG for pie charts and bar models. Consider using a library for more complex visualizations.
+
+- **Interactive Tutorials**: Includes dynamic elements. Could be expanded with more diverse examples.
+
+- **Exercise System**: Three fixed exercises. Consider implementing dynamic generation for scalability.
+
+- **Quiz Functionality**: Predefined questions. Implement randomization and difficulty levels for robustness.
+
+- **Progress Tracking**: In-memory tracking. Add local storage or backend for persistence.
+
+- **Code Organization**: Well-structured JavaScript. Consider a framework for larger-scale development.
+
+- **Error Handling**: Basic input validation present. Enhance with more comprehensive checks.
+
+- **Accessibility**: Basic structure supports accessibility. Further improvements possible.
+
+- **Performance**: Currently lightweight. Plan for optimization if adding more features.
+
+- **Enhancements**: Potential for more topics, user accounts, and diverse question types.

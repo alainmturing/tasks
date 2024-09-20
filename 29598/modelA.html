@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Math Tutor</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; background: #f4f4f9; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .tab { display: none; }
+        .tab-button { background-color: #eee; border: none; padding: 10px 20px; margin: 0 2px; cursor: pointer; }
+        .tab-button:hover { background-color: #ddd; }
+        #tabs button.active { background-color: #ccc; }
+        .visual-rep { width: 100%; height: 200px; }
+        input[type="text"] { width: 50px; }
+        .quiz-answer { margin: 10px 0; }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.css">
+</head>
+<body>
+
+<div class="container">
+    <div id="tabs">
+        <button class="tab-button" onclick="openTab(event, 'Fractions')">Fractions</button>
+        <button class="tab-button" onclick="openTab(event, 'Decimals')">Decimals</button>
+        <button class="tab-button" onclick="openTab(event, 'Conversion')">Conversion</button>
+        <button class="tab-button" onclick="openTab(event, 'Quizzes')">Quizzes</button>
+    </div>
+
+    <div id="Fractions" class="tab">
+        <h2>Fractions Visual Representation</h2>
+        <canvas id="fractionPie" class="visual-rep"></canvas>
+        <input type="number" id="numerator" placeholder="Numerator"> / 
+        <input type="number" id="denominator" placeholder="Denominator">
+        <button onclick="drawFraction()">Draw Fraction</button>
+    </div>
+
+    <div id="Decimals" class="tab">
+        <h2>Decimals to Fractions</h2>
+        <input type="number" step="0.01" id="decimalInput" placeholder="Enter Decimal">
+        <button onclick="decimalToFraction()">Convert</button>
+        <p id="decimalResult"></p>
+    </div>
+
+    <div id="Conversion" class="tab">
+        <h2>Fraction to Decimal and Percentage</h2>
+        <input type="number" id="convNumerator" placeholder="Numerator"> / 
+        <input type="number" id="convDenominator" placeholder="Denominator">
+        <button onclick="convertFraction()">Convert</button>
+        <p id="conversionResult"></p>
+    </div>
+
+    <div id="Quizzes" class="tab">
+        <h2>Quiz</h2>
+        <div id="quizContent"></div>
+        <button onclick="generateQuiz()">Start Quiz</button>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.4.4/math.min.js"></script>
+<script>
+    function openTab(evt, tabName) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tab-button");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
+
+    function drawFraction() {
+        const numerator = document.getElementById('numerator').value;
+        const denominator = document.getElementById('denominator').value;
+        if (!numerator || !denominator) return;
+
+        const ctx = document.getElementById('fractionPie').getContext('2d');
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                datasets: [{
+                    data: [numerator, denominator - numerator],
+                    backgroundColor: ['#FF6384', '#36A2EB']
+                }]
+            },
+            options: { responsive: true }
+        });
+    }
+
+    function decimalToFraction() {
+        const decimal = parseFloat(document.getElementById('decimalInput').value);
+        const fraction = math.fraction(decimal);
+        document.getElementById('decimalResult').innerText = `Fraction: ${fraction.numerator}/${fraction.denominator}`;
+    }
+
+    function convertFraction() {
+        const num = document.getElementById('convNumerator').value;
+        const den = document.getElementById('convDenominator').value;
+        const decimal = num / den;
+        const percentage = decimal * 100;
+        document.getElementById('conversionResult').innerText = 
+            `Decimal: ${decimal.toFixed(2)}, Percentage: ${percentage.toFixed(2)}%`;
+    }
+
+    function generateQuiz() {
+        const quizContent = document.getElementById('quizContent');
+        quizContent.innerHTML = ''; // Clear previous quiz
+        const questions = [
+            { type: 'fractionToDecimal', numerator: Math.floor(Math.random() * 10) + 1, denominator: Math.floor(Math.random() * 10) + 1 },
+            // Add more question types here
+        ];
+
+        questions.forEach((q, index) => {
+            let questionHTML = `<p>${index+1}. Convert ${q.numerator}/${q.denominator} to a decimal:</p>
+                                <input type="text" id="q${index}" class="quiz-answer">
+                                <button onclick="checkAnswer(${index}, ${q.numerator}, ${q.denominator})">Check</button><br>`;
+            quizContent.innerHTML += questionHTML;
+        });
+    }
+
+    function checkAnswer(qIndex, num, den) {
+        const userAnswer = parseFloat(document.getElementById(`q${qIndex}`).value);
+        const correctAnswer = num / den;
+        alert(userAnswer === correctAnswer ? "Correct!" : `Wrong. The correct answer is ${correctAnswer}`);
+    }
+
+    // Start with the Fractions tab open
+    document.getElementsByClassName('tab-button')[0].click();
+</script>
+
+</body>
+</html>
