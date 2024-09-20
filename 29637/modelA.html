@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Word Guess Game</title>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<style>
+    body { font-family: 'Arial', sans-serif; text-align: center; background: #f0f0f0; }
+    #game-container { width: 80%; margin: auto; background: white; padding: 20px; border-radius: 10px; }
+    #word-display { font-size: 2em; margin: 20px; letter-spacing: 10px; }
+    .keyboard-button { padding: 10px; margin: 5px; cursor: pointer; background: #e0e0e0; border: none; border-radius: 5px; }
+    .keyboard-button:hover { background: #d0d0d0; }
+    #hangman { width: 200px; height: 200px; margin: auto; }
+    #hint, #play-again { margin-top: 20px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+    <h1>Word Guess Game</h1>
+    <select id="category">
+        <option value="animals">Animals</option>
+        <option value="countries">Countries</option>
+        <option value="foods">Foods</option>
+    </select>
+    <select id="difficulty">
+        <option value="easy">Easy</option>
+        <option value="medium">Medium</option>
+        <option value="hard">Hard</option>
+    </select>
+    <button onclick="startGame()">Start Game</button>
+    <div id="word-display">_ _ _ _ _</div>
+    <div id="keyboard"></div>
+    <div id="hangman"></div>
+    <button id="hint" onclick="useHint()">Hint</button>
+    <div id="score">Score: 0</div>
+    <button id="play-again" style="display:none;" onclick="location.reload()">Play Again</button>
+</div>
+
+<script>
+    const words = {
+        animals: ['elephant', 'giraffe', 'tiger'],
+        countries: ['germany', 'brazil', 'japan'],
+        foods: ['pizza', 'sushi', 'taco']
+    };
+    let word, guessedLetters = [], attemptsLeft, gameOver = false;
+
+    function startGame() {
+        const category = document.getElementById('category').value;
+        const difficulty = document.getElementById('difficulty').value;
+        word = words[category][Math.floor(Math.random() * words[category].length)];
+        attemptsLeft = difficulty === 'easy' ? 10 : (difficulty === 'medium' ? 8 : 6);
+        setupGame();
+    }
+
+    function setupGame() {
+        $('#word-display').html('_ '.repeat(word.length));
+        renderKeyboard();
+        renderHangman();
+        $('#score').text('Score: 0');
+        gameOver = false;
+        guessedLetters = [];
+    }
+
+    function renderKeyboard() {
+        let keyboardHTML = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(char => 
+            `<button class="keyboard-button" onclick="guess('${char}')">${char}</button>`
+        ).join('');
+        $('#keyboard').html(keyboardHTML);
+    }
+
+    function renderHangman() {
+        // Simplified SVG for hangman, replace with actual SVG or alternative
+        $('#hangman').html('<svg width="200" height="200"><circle cx="100" cy="50" r="40" style="stroke:black; stroke-width:2; fill:none;" /></svg>');
+    }
+
+    function guess(char) {
+        if (gameOver || guessedLetters.includes(char)) return;
+        guessedLetters.push(char);
+        if (word.includes(char)) {
+            updateWordDisplay();
+            playSound('correct');
+        } else {
+            attemptsLeft--;
+            updateHangman();
+            playSound('incorrect');
+        }
+        checkGameState();
+    }
+
+    function updateWordDisplay() {
+        let display = word.split('').map(letter => guessedLetters.includes(letter) ? letter : '_').join(' ');
+        $('#word-display').text(display);
+    }
+
+    function updateHangman() {
+        // Update SVG or visual representation here
+        if (attemptsLeft === 0) gameOver = true;
+    }
+
+    function checkGameState() {
+        if (!$('#word-display').text().includes('_')) {
+            gameOver = true;
+            alert('You Win!');
+            document.getElementById('play-again').style.display = 'inline';
+        } else if (attemptsLeft === 0) {
+            gameOver = true;
+            alert('Game Over! The word was: ' + word);
+            document.getElementById('play-again').style.display = 'inline';
+        }
+    }
+
+    function useHint() {
+        if (!gameOver) {
+            let unguessed = word.split('').filter(l => !guessedLetters.includes(l));
+            if (unguessed.length > 0) guess(unguessed[0]);
+        }
+    }
+
+    function playSound(type) {
+        // Basic sound implementation; for actual sounds, integrate with Web Audio API
+        console.log(type + ' sound played');
+    }
+</script>
+
+</body>
+</html>

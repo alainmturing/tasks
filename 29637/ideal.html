@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Word Guessing Game</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            margin-top: 20px;
+            color: #343a40;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .selection {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .selection div {
+            margin: 10px 0;
+        }
+
+        label {
+            margin-right: 10px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        select, button {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .game-area {
+            display: none;
+            text-align: center;
+        }
+
+        .word-display {
+            font-size: 2em;
+            letter-spacing: 10px;
+            margin: 20px 0;
+            color: #343a40;
+        }
+
+        .keyboard {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .keyboard button {
+            width: 40px;
+            height: 40px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background: #dee2e6;
+            color: #343a40;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.3s;
+        }
+
+        .keyboard button:disabled {
+            background: #adb5bd;
+            cursor: not-allowed;
+        }
+
+        .keyboard button.active {
+            background: #6c757d;
+            color: #fff;
+            transform: scale(1.1);
+        }
+
+        .hint-btn, .play-again-btn {
+            padding: 10px 20px;
+            margin: 10px;
+            border: none;
+            border-radius: 5px;
+            background: #0d6efd;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .hint-btn:hover, .play-again-btn:hover {
+            background: #0b5ed7;
+        }
+
+        .score {
+            font-size: 1.2em;
+            color: #343a40;
+            margin-top: 10px;
+        }
+
+        .svg-container {
+            width: 200px;
+            height: 250px;
+            margin: 0 auto;
+        }
+
+        /* Animations */
+        .letter-reveal {
+            animation: reveal 0.5s ease-in-out;
+        }
+
+        @keyframes reveal {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .keyboard button:active {
+            transform: scale(0.95);
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .word-display {
+                font-size: 1.5em;
+                letter-spacing: 5px;
+            }
+
+            .keyboard button {
+                width: 30px;
+                height: 30px;
+                margin: 3px;
+                font-size: 14px;
+            }
+
+            .svg-container {
+                width: 150px;
+                height: 200px;
+            }
+        }
+        .remaining-guesses {
+            font-size: 1.2em;
+            color: #343a40;
+            margin-top: 10px;
+        }
+        .restart-btn, .hard-restart-btn {
+            padding: 10px 20px;
+            margin: 10px;
+            border: none;
+            border-radius: 5px;
+            background: #28a745;
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .restart-btn:hover, .hard-restart-btn:hover {
+            background: #218838;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            animation: modalFadeIn 0.3s;
+        }
+
+        @keyframes modalFadeIn {
+            from {opacity: 0; transform: translateY(-50px);}
+            to {opacity: 1; transform: translateY(0);}
+        }
+
+        .modal h2 {
+            color: #343a40;
+            margin-top: 0;
+        }
+
+        .modal p {
+            color: #495057;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+
+        .modal button {
+            padding: 10px 20px;
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s;
+        }
+
+        .modal button:hover {
+            background-color: #0b5ed7;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle"></h2>
+            <p id="modalMessage"></p>
+            <button id="modalCloseBtn">Play Again</button>
+        </div>
+    </div>
+    <h1>Word Guessing Game</h1>
+
+    <div class="container">
+        <div class="selection" id="selection-area">
+            <div>
+                <label for="category">Category:</label>
+                <select id="category">
+                    <option value="animals">Animals</option>
+                    <option value="countries">Countries</option>
+                    <option value="foods">Foods</option>
+                </select>
+            </div>
+            <div>
+                <label for="difficulty">Difficulty:</label>
+                <select id="difficulty">
+                    <option value="easy">Easy</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="hard">Hard</option>
+                </select>
+            </div>
+            <div>
+                <button id="start-game">Start Game</button>
+            </div>
+        </div>
+
+        <div class="game-area" id="game-area" style="display:none;">
+            <div class="svg-container" id="svg-container">
+                <!-- SVG Hangman -->
+                <svg height="250" width="200">
+                    <!-- Base -->
+                    <line x1="20" y1="230" x2="180" y2="230" stroke="#343a40" stroke-width="4"/>
+                    <!-- Pole -->
+                    <line x1="50" y1="230" x2="50" y2="20" stroke="#343a40" stroke-width="4"/>
+                    <!-- Beam -->
+                    <line x1="50" y1="20" x2="150" y2="20" stroke="#343a40" stroke-width="4"/>
+                    <!-- Rope -->
+                    <line x1="150" y1="20" x2="150" y2="50" stroke="#343a40" stroke-width="4"/>
+                    <!-- Head -->
+                    <circle cx="150" cy="70" r="20" stroke="#343a40" stroke-width="4" fill="none" id="head" style="display:none;"/>
+                    <!-- Body -->
+                    <line x1="150" y1="90" x2="150" y2="150" stroke="#343a40" stroke-width="4" id="body" style="display:none;"/>
+                    <!-- Left Arm -->
+                    <line x1="150" y1="110" x2="120" y2="130" stroke="#343a40" stroke-width="4" id="left-arm" style="display:none;"/>
+                    <!-- Right Arm -->
+                    <line x1="150" y1="110" x2="180" y2="130" stroke="#343a40" stroke-width="4" id="right-arm" style="display:none;"/>
+                    <!-- Left Leg -->
+                    <line x1="150" y1="150" x2="120" y2="180" stroke="#343a40" stroke-width="4" id="left-leg" style="display:none;"/>
+                    <!-- Right Leg -->
+                    <line x1="150" y1="150" x2="180" y2="180" stroke="#343a40" stroke-width="4" id="right-leg" style="display:none;"/>
+                </svg>
+            </div>
+
+            <div class="word-display" id="word-display">
+                <!-- Hidden word will appear here -->
+            </div>
+
+            <div class="keyboard" id="keyboard">
+                <!-- On-screen keyboard -->
+                <!-- Letters will be generated via JavaScript -->
+            </div>
+
+            <button class="hint-btn" id="hint-btn">Hint</button>
+
+            <div class="score" id="score">
+                Score: 0
+            </div>
+
+            <div class="remaining-guesses" id="remaining-guesses">
+                Remaining Guesses: 6
+            </div>
+
+            <button class="restart-btn" id="restart">Restart</button>
+            <button class="hard-restart-btn" id="hard-restart">Change Difficulty</button>
+        </div>
+    </div>
+
+    <script>
+        // Word lists
+        const WORDS = {
+            animals: ['elephant', 'giraffe', 'kangaroo', 'alligator', 'dolphin', 'hippopotamus', 'penguin', 'rhinoceros', 'tortoise', 'crocodile'],
+            countries: ['canada', 'brazil', 'germany', 'australia', 'india', 'norway', 'japan', 'mexico', 'switzerland', 'southafrica'],
+            foods: ['pizza', 'sushi', 'hamburger', 'pasta', 'tacos', 'icecream', 'chocolate', 'salad', 'noodles', 'steak']
+        };
+
+        // Categories
+        const categories = Object.keys(WORDS);
+
+        // Difficulty settings
+        const DIFFICULTY = {
+            easy: { maxWrong: 6, wordLength: [8, Infinity] },
+            medium: { maxWrong: 6, wordLength: [5, 7] },
+            hard: { maxWrong: 6, wordLength: [3, 4] }
+        };
+
+        // Game state
+        let selectedCategory = 'animals';
+        let selectedDifficulty = 'medium';
+        let secretWord = '';
+        let displayedWord = [];
+        let wrongGuesses = 0;
+        let maxWrong = DIFFICULTY[selectedDifficulty].maxWrong;
+        let guessedLetters = new Set();
+        let score = 0;
+        let hintUsed = false;
+        let hint = '';
+
+        // DOM elements
+        const startBtn = document.getElementById('start-game');
+        const categorySelect = document.getElementById('category');
+        const difficultySelect = document.getElementById('difficulty');
+        const selectionArea = document.getElementById('selection-area');
+        const gameArea = document.getElementById('game-area');
+        const wordDisplay = document.getElementById('word-display');
+        const keyboard = document.getElementById('keyboard');
+        const hintBtn = document.getElementById('hint-btn');
+        const scoreDisplay = document.getElementById('score');
+        const remainingGuessesDisplay = document.getElementById('remaining-guesses');
+        const restartBtn = document.getElementById('restart');
+        const hardRestartBtn = document.getElementById('hard-restart');
+        const svgElements = {
+            head: document.getElementById('head'),
+            body: document.getElementById('body'),
+            leftArm: document.getElementById('left-arm'),
+            rightArm: document.getElementById('right-arm'),
+            leftLeg: document.getElementById('left-leg'),
+            rightLeg: document.getElementById('right-leg')
+        };
+
+        // Sound effects
+        const sounds = {
+            correct: new AudioContext(),
+            incorrect: new AudioContext()
+        };
+
+        function playSound(type) {
+            const oscillator = type === 'correct' ? sounds.correct.createOscillator() : sounds.incorrect.createOscillator();
+            const gainNode = type === 'correct' ? sounds.correct.createGain() : sounds.incorrect.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(type === 'correct' ? sounds.correct.destination : sounds.incorrect.destination);
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(type === 'correct' ? 600 : 200, sounds.correct.currentTime);
+            gainNode.gain.setValueAtTime(0.1, sounds.correct.currentTime);
+            oscillator.start();
+            oscillator.stop(sounds.correct.currentTime + 0.2);
+        }
+
+        // Initialize keyboard
+        function initKeyboard() {
+            keyboard.innerHTML = '';
+            const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
+            letters.forEach(letter => {
+                const button = document.createElement('button');
+                button.textContent = letter.toUpperCase();
+                button.id = `key-${letter}`;
+                button.addEventListener('click', () => handleGuess(letter));
+                keyboard.appendChild(button);
+            });
+        }
+
+        // Choose a random word based on category and difficulty
+        function chooseWord() {
+            const words = WORDS[selectedCategory].filter(word => {
+                const len = word.length;
+                return len >= DIFFICULTY[selectedDifficulty].wordLength[0] && len <= DIFFICULTY[selectedDifficulty].wordLength[1];
+            });
+            if (words.length === 0) {
+                // Fallback if no words match
+                return WORDS[selectedCategory][Math.floor(Math.random() * WORDS[selectedCategory].length)];
+            }
+            return words[Math.floor(Math.random() * words.length)];
+        }
+
+        // Update the SVG based on wrong guesses
+        function updateSVG() {
+            const parts = ['head', 'body', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg'];
+            if (wrongGuesses > 0 && wrongGuesses <= parts.length) {
+                const part = svgElements[parts[wrongGuesses - 1]];
+                part.style.display = 'block';
+                
+                // Only animate if the part is not already visible
+                if (part.getAttribute('data-animated') !== 'true') {
+                    part.style.strokeDasharray = "1000";
+                    part.style.strokeDashoffset = "1000";
+                    
+                    const animation = part.animate([
+                        { strokeDashoffset: 1000 },
+                        { strokeDashoffset: 0 }
+                    ], {
+                        duration: 500,
+                        easing: 'ease-out',
+                        fill: 'forwards'  // Keeps the final state of the animation
+                    });
+                    
+                    animation.onfinish = () => {
+                        part.style.strokeDasharray = "";
+                        part.style.strokeDashoffset = "";
+                        part.setAttribute('data-animated', 'true');
+                    };
+                }
+            }
+            
+            // Ensure all previous parts are visible
+            for (let i = 0; i < wrongGuesses && i < parts.length; i++) {
+                svgElements[parts[i]].style.display = 'block';
+            }
+        }
+
+        // Display the current state of the word
+        function displayWord() {
+            wordDisplay.innerHTML = '';
+            displayedWord.forEach((letter, index) => {
+                const span = document.createElement('span');
+                span.textContent = letter ? letter.toUpperCase() : '_';
+                if (letter) span.classList.add('letter-reveal');
+                wordDisplay.appendChild(span);
+            });
+        }
+
+        let isGuessing = false;
+
+        function handleGuess(letter) {
+            if (isGuessing || guessedLetters.has(letter)) return;
+            
+            isGuessing = true;
+            guessedLetters.add(letter);
+            const button = document.getElementById(`key-${letter}`);
+            if (button) {
+                button.disabled = true;
+                button.classList.add('active');
+            }
+
+            if (secretWord.includes(letter)) {
+                playSound('correct');
+                secretWord.split('').forEach((l, idx) => {
+                    if (l === letter) {
+                        displayedWord[idx] = letter;
+                        const spans = wordDisplay.querySelectorAll('span');
+                        spans[idx].textContent = letter.toUpperCase();
+                        spans[idx].classList.add('letter-reveal');
+                    }
+                });
+                score += 10;
+                scoreDisplay.textContent = `Score: ${score}`;
+                checkWin();
+            } else {
+                playSound('incorrect');
+                wrongGuesses++;
+                updateSVG();
+                score = Math.max(0, score - 5);
+                scoreDisplay.textContent = `Score: ${score}`;
+                remainingGuessesDisplay.textContent = `Remaining Guesses: ${maxWrong - wrongGuesses}`;
+                checkLose();
+            }
+
+            // Add a small delay before allowing the next guess
+            setTimeout(() => {
+                isGuessing = false;
+            }, 200); // 200ms delay, adjust as needed
+        }
+
+        // Check if the player has won
+        function checkWin() {
+            if (!displayedWord.includes('')) {
+                endGame(true);
+            }
+        }
+
+        // Check if the player has lost
+        function checkLose() {
+            if (wrongGuesses >= maxWrong) {
+                endGame(false);
+            }
+        }
+
+        // End the game
+        function endGame(win) {
+            keyboard.querySelectorAll('button').forEach(button => button.disabled = true);
+            hintBtn.disabled = true;
+            const modal = document.getElementById('gameModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalMessage = document.getElementById('modalMessage');
+            
+            if (win) {
+                modalTitle.textContent = 'Congratulations!';
+                modalMessage.textContent = `You guessed the word "${secretWord.toUpperCase()}"`;
+            } else {
+                modalTitle.textContent = 'Game Over';
+                modalMessage.textContent = `The word was "${secretWord.toUpperCase()}"`;
+            }
+            
+            modal.style.display = 'block';
+        }
+
+        // Update the restartGame function
+        function restartGame() {
+            const modal = document.getElementById('gameModal');
+            modal.style.display = 'none';
+            initGame();
+        }
+
+        // Provide a hint
+        function provideHint() {
+            if (hintUsed) return;
+            hintUsed = true;
+            // Simple hint: reveal a random unguessed letter
+            const unguessed = secretWord.split('').filter(l => !guessedLetters.has(l));
+            if (unguessed.length === 0) return;
+            const hintLetter = unguessed[Math.floor(Math.random() * unguessed.length)];
+            handleGuess(hintLetter);
+            hintBtn.disabled = true;
+        }
+
+        // Initialize the game
+        function initGame() {
+            selectedCategory = categorySelect.value;
+            selectedDifficulty = difficultySelect.value;
+            secretWord = chooseWord().toLowerCase();
+            displayedWord = Array(secretWord.length).fill('');
+            wrongGuesses = 0;
+            maxWrong = DIFFICULTY[selectedDifficulty].maxWrong;
+            guessedLetters.clear();
+            hintUsed = false;
+            hintBtn.disabled = false;
+            score = 0;
+            scoreDisplay.textContent = `Score: ${score}`;
+            remainingGuessesDisplay.textContent = `Remaining Guesses: ${maxWrong}`;
+            wordDisplay.innerHTML = '';
+            keyboard.querySelectorAll('button').forEach(button => {
+                button.disabled = false;
+                button.classList.remove('active');
+            });
+            // Reset SVG
+            Object.values(svgElements).forEach(element => {
+                element.style.display = 'none';
+                element.style.strokeDasharray = "";
+                element.style.strokeDashoffset = "";
+            });
+            displayWord();
+            selectionArea.style.display = 'none';
+            gameArea.style.display = 'block';
+            restartBtn.style.display = 'inline-block';
+            hardRestartBtn.style.display = 'inline-block';
+        }
+
+        document.getElementById('modalCloseBtn').addEventListener('click', restartGame);
+
+
+        // Hard restart - go back to difficulty selection
+        function hardRestart() {
+            selectionArea.style.display = 'flex';
+            gameArea.style.display = 'none';
+        }
+
+        // Handle keyboard input
+        function handleKeyPress(event) {
+            const letter = event.key.toLowerCase();
+            if (/^[a-z]$/.test(letter)) {
+                handleGuess(letter);
+                const button = document.getElementById(`key-${letter}`);
+                if (button) {
+                    button.disabled = true;
+                    button.classList.add('active');
+                }
+            }
+        }
+        // Event listeners
+        startBtn.addEventListener('click', initGame);
+        hintBtn.addEventListener('click', provideHint);
+        restartBtn.addEventListener('click', restartGame);
+        hardRestartBtn.addEventListener('click', hardRestart);
+        document.addEventListener('keydown', handleKeyPress);
+
+        // Initialize
+        initKeyboard();
+    </script>
+
+</body>
+</html>

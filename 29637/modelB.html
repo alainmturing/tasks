@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Guess Game</title>
+<style>
+body { font-family: 'Arial', sans-serif; background-color: #f4f4f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+.game-container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; width: 80%; max-width: 500px; }
+.word { font-size: 2em; letter-spacing: 0.2em; margin: 20px 0; }
+.keyboard div { margin: 5px; }
+.key { padding: 10px; width: 40px; background: #e1e1e1; border: none; border-radius: 4px; cursor: pointer; transition: transform 0.1s; }
+.key:hover, .key:focus { transform: scale(1.1); background: #d1d1d1; }
+#hangman { width: 200px; height: 200px; margin: 20px auto; }
+.difficulty, .category { margin: 10px 0; }
+button { margin-top: 10px; padding: 10px 20px; }
+@keyframes flip {
+    0% { transform: rotateX(0deg); }
+    50% { transform: rotateX(90deg); background: #333; color: #333; }
+    100% { transform: rotateX(0deg); }
+}
+.letter-box { display: inline-block; margin: 0 5px; width: 30px; height: 40px; line-height: 40px; border-bottom: 3px solid #333; }
+.letter-box.revealed { animation: flip 0.5s; }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+  <h1>Word Guess Game</h1>
+  <div class="category">
+    <label for="category">Category: </label>
+    <select id="category">
+      <option value="animals">Animals</option>
+      <option value="countries">Countries</option>
+      <option value="foods">Foods</option>
+    </select>
+  </div>
+  <div class="difficulty">
+    <label for="difficulty">Difficulty: </label>
+    <select id="difficulty">
+      <option value="easy">Easy</option>
+      <option value="medium">Medium</option>
+      <option value="hard">Hard</option>
+    </select>
+  </div>
+  <button onclick="startGame()">Start Game</button>
+  <div class="word" id="wordDisplay"></div>
+  <div id="hangman"></div>
+  <div class="keyboard" id="keyboard"></div>
+  <button onclick="giveHint()">Hint</button>
+  <div id="score">Score: <span id="currentScore">0</span></div>
+  <div id="gameStatus"></div>
+</div>
+
+<script>
+// Game setup
+let word, guessedWord, maxGuesses, guessesLeft, gameActive = false;
+const categories = {
+  animals: ['elephant', 'kangaroo', 'cheetah'],
+  countries: ['japan', 'brazil', 'australia'],
+  foods: ['pizza', 'sushi', 'taco']
+};
+const soundCorrect = new Audio('path/to/correct.mp3'); // Replace with actual path or CDN link
+const soundWrong = new Audio('path/to/wrong.mp3'); // Replace with actual path or CDN link
+
+function startGame() {
+  const category = document.getElementById('category').value;
+  const difficulty = document.getElementById('difficulty').value;
+  maxGuesses = difficulty === 'hard' ? 6 : difficulty === 'medium' ? 8 : 10;
+  guessesLeft = maxGuesses;
+  word = categories[category][Math.floor(Math.random() * categories[category].length)].toUpperCase();
+  guessedWord = new Array(word.length).fill('_');
+  gameActive = true;
+  updateDisplay();
+  generateKeyboard();
+}
+
+function updateDisplay() {
+  document.getElementById('wordDisplay').textContent = guessedWord.join(' ');
+  document.getElementById('gameStatus').textContent = `Guesses left: ${guessesLeft}`;
+  updateHangman();
+}
+
+function generateKeyboard() {
+  let keyboard = document.getElementById('keyboard');
+  keyboard.innerHTML = '';
+  for (let i = 65; i <= 90; i++) {
+    let key = document.createElement('button');
+    key.textContent = String.fromCharCode(i);
+    key.className = 'key';
+    key.onclick = () => guess(String.fromCharCode(i));
+    keyboard.appendChild(key);
+  }
+}
+
+function guess(letter) {
+  if (!gameActive) return;
+  if (word.includes(letter)) {
+    for(let i = 0; i < word.length; i++) {
+      if (word[i] === letter) guessedWord[i] = letter;
+    }
+    soundCorrect.play();
+  } else {
+    guessesLeft--;
+    soundWrong.play();
+  }
+  document.querySelector(`.key:contains(${letter})`).disabled = true;
+  updateDisplay();
+  checkGameState();
+}
+
+function checkGameState() {
+  if (guessedWord.join('') === word) {
+    gameActive = false;
+    alert('You Win! Play again?');
+    // Update score here
+  } else if (guessesLeft <= 0) {
+    gameActive = false;
+    alert(`Game Over! The word was ${word}. Try again?`);
+  }
+}
+
+function giveHint() {
+  if (!gameActive) return;
+  let unrevealed = word.split('').filter((char, idx) => guessedWord[idx] === '_');
+  if (unrevealed.length) {
+    let hintChar = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+    guess(hintChar);
+  }
+}
+
+function updateHangman() {
+  // SVG update logic here or alternative visual update
+}
+
+document.addEventListener('keydown', function(event) {
+  if (event.keyCode >= 65 && event.keyCode <= 90 && gameActive) {
+    guess(event.key.toUpperCase());
+  }
+});
+
+// Initial setup
+document.getElementById('keyboard').onclick = (event) => {
+  if (event.target.classList.contains('key')) {
+    event.target.style.transform = 'scale(0.9)';
+    setTimeout(() => event.target.style.transform = '', 100);
+  }
+};
+</script>
+</body>
+</html>
