@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Intermediate Korean Learning App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        /* Reset and Base Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            background-color: #f4f4f4;
+            color: #333;
+            padding: 20px;
+        }
+
+        h1, h2, h3 {
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+
+        /* Navigation Styles */
+        nav {
+            margin-bottom: 20px;
+        }
+
+        nav button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin-right: 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+        nav button:hover, nav button.active {
+            background-color: #2980b9;
+        }
+
+        /* Section Styles */
+        section {
+            display: none;
+        }
+
+        section.active {
+            display: block;
+        }
+
+        /* How to Use Styles */
+        #how-to-use p {
+            margin-bottom: 10px;
+        }
+
+        /* Vocabulary Grid Styles */
+        #vocabulary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .word-card {
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .word-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .word-card h3 {
+            margin-bottom: 5px;
+            font-size: 1.2em;
+            color: #e74c3c;
+        }
+
+        .word-card p {
+            margin-bottom: 3px;
+            color: #555;
+        }
+
+        /* Listening Quiz Styles */
+        #listening-quiz .quiz-container {
+            margin-bottom: 20px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .quiz-audio {
+            margin-bottom: 10px;
+        }
+
+        .transcript {
+            display: none;
+            margin-top: 10px;
+            background-color: #ecf0f1;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .quiz-options label {
+            display: block;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+
+        .quiz-options input {
+            margin-right: 10px;
+        }
+
+        .submit-btn {
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            background-color: #27ae60;
+        }
+
+        .feedback {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 600px) {
+            nav button {
+                padding: 8px 12px;
+                margin-bottom: 10px;
+                width: 100%;
+            }
+
+            .word-card {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Intermediate Korean Learning App</h1>
+
+    <nav>
+        <button id="how-to-use-btn" class="active">How to Use</button>
+        <button id="vocabulary-btn">Vocabulary Practice</button>
+        <button id="listening-quiz-btn">Listening Quiz</button>
+    </nav>
+
+    <!-- How to Use Section -->
+    <section id="how-to-use" class="active">
+        <h2>How to Use</h2>
+        <p>Welcome to the Intermediate Korean Learning App! Here's how you can make the most out of it:</p>
+        <ul>
+            <li><strong>Vocabulary Practice:</strong> Browse through 50 intermediate Korean words and phrases. Click on any word to hear its pronunciation.</li>
+            <li><strong>Listening Quiz:</strong> Test your listening skills by listening to audio clips and answering multiple-choice questions. You can toggle the transcript to aid your understanding.</li>
+        </ul>
+        <p>Use the navigation buttons above to switch between sections. Happy Learning!</p>
+    </section>
+
+    <!-- Vocabulary Practice Section -->
+    <section id="vocabulary">
+        <h2>Vocabulary Practice</h2>
+        <div id="vocabulary-grid">
+            <!-- Vocabulary cards will be injected here by JavaScript -->
+        </div>
+    </section>
+
+    <!-- Listening Quiz Section -->
+    <section id="listening-quiz">
+        <h2>Listening Quiz</h2>
+        <div id="quiz-container">
+            <!-- Quiz questions will be injected here by JavaScript -->
+        </div>
+    </section>
+
+    <script>
+        // Navigation Handling
+        const navButtons = {
+            howToUse: document.getElementById('how-to-use-btn'),
+            vocabulary: document.getElementById('vocabulary-btn'),
+            listeningQuiz: document.getElementById('listening-quiz-btn')
+        };
+
+        const sections = {
+            howToUse: document.getElementById('how-to-use'),
+            vocabulary: document.getElementById('vocabulary'),
+            listeningQuiz: document.getElementById('listening-quiz')
+        };
+
+        for (let btn in navButtons) {
+            navButtons[btn].addEventListener('click', () => {
+                // Remove active class from all buttons
+                for (let b in navButtons) {
+                    navButtons[b].classList.remove('active');
+                }
+                // Hide all sections
+                for (let s in sections) {
+                    sections[s].classList.remove('active');
+                }
+                // Add active class to clicked button and show corresponding section
+                navButtons[btn].classList.add('active');
+                sections[btn.charAt(0).toLowerCase() + btn.slice(1)].classList.add('active');
+            });
+        }
+
+        // Vocabulary Data
+        const vocabulary = [
+            { korean: '사과', romanization: 'sagwa', english: 'apple' },
+            { korean: '학교', romanization: 'hakgyo', english: 'school' },
+            { korean: '책', romanization: 'chaek', english: 'book' },
+            { korean: '친구', romanization: 'chingu', english: 'friend' },
+            { korean: '커피', romanization: 'keopi', english: 'coffee' },
+            { korean: '영화', romanization: 'yeonghwa', english: 'movie' },
+            { korean: '음악', romanization: 'eumak', english: 'music' },
+            { korean: '컴퓨터', romanization: 'keompyuteo', english: 'computer' },
+            { korean: '자동차', romanization: 'jadongcha', english: 'car' },
+            { korean: '식당', romanization: 'sikdang', english: 'restaurant' },
+            { korean: '비행기', romanization: 'bihaenggi', english: 'airplane' },
+            { korean: '병원', romanization: 'byeongwon', english: 'hospital' },
+            { korean: '공원', romanization: 'gongwon', english: 'park' },
+            { korean: '은행', romanization: 'eunhaeng', english: 'bank' },
+            { korean: '시간', romanization: 'sigan', english: 'time' },
+            { korean: '일', romanization: 'il', english: 'work' },
+            { korean: '가족', romanization: 'gajok', english: 'family' },
+            { korean: '사랑', romanization: 'sarang', english: 'love' },
+            { korean: '여행', romanization: 'yeohaeng', english: 'travel' },
+            { korean: '운동', romanization: 'undong', english: 'exercise' },
+            { korean: '날씨', romanization: 'nalssi', english: 'weather' },
+            { korean: '시장', romanization: 'sijang', english: 'market' },
+            { korean: '사진', romanization: 'sajin', english: 'photo' },
+            { korean: '문제', romanization: 'munje', english: 'problem' },
+            { korean: '소풍', romanization: 'sopung', english: 'picnic' },
+            { korean: '약속', romanization: 'yaksok', english: 'appointment' },
+            { korean: '과일', romanization: 'gwail', english: 'fruit' },
+            { korean: '채소', romanization: 'chaeso', english: 'vegetable' },
+            { korean: '노래', romanization: 'norae', english: 'song' },
+            { korean: '시장', romanization: 'sijang', english: 'market' },
+            { korean: '소설', romanization: 'soseol', english: 'novel' },
+            { korean: '컴퓨터', romanization: 'keompyuteo', english: 'computer' },
+            { korean: '인터넷', romanization: 'inteonet', english: 'internet' },
+            { korean: '전자', romanization: 'jeonja', english: 'electronics' },
+            { korean: '고양이', romanization: 'goyangi', english: 'cat' },
+            { korean: '강아지', romanization: 'gangaji', english: 'puppy' },
+            { korean: '책상', romanization: 'chaeksang', english: 'desk' },
+            { korean: '의자', romanization: 'uija', english: 'chair' },
+            { korean: '창문', romanization: 'changmun', english: 'window' },
+            { korean: '문', romanization: 'mun', english: 'door' },
+            { korean: '벽', romanization: 'byeok', english: 'wall' },
+            { korean: '바닥', romanization: 'badak', english: 'floor' },
+            { korean: '천장', romanization: 'cheonjang', english: 'ceiling' },
+            { korean: '전화', romanization: 'jeonhwa', english: 'telephone' },
+            { korean: '텔레비전', romanization: 'tellebijeon', english: 'television' },
+            { korean: '냉장고', romanization: 'naengjanggo', english: 'refrigerator' },
+            { korean: '오븐', romanization: 'obeun', english: 'oven' }
+        ];
+
+        // Populate Vocabulary Grid
+        const vocabGrid = document.getElementById('vocabulary-grid');
+        const synth = window.speechSynthesis;
+
+        vocabulary.forEach(word => {
+            const card = document.createElement('div');
+            card.classList.add('word-card');
+            card.innerHTML = `
+                <h3>${word.korean}</h3>
+                <p><em>${word.romanization}</em></p>
+                <p>${word.english}</p>
+            `;
+            card.addEventListener('click', () => {
+                speak(word.korean);
+            });
+            vocabGrid.appendChild(card);
+        });
+
+        // Function to Speak Text using Web Speech API
+        function speak(text) {
+            if (synth.speaking) {
+                console.error('speechSynthesis.speaking');
+                return;
+            }
+            const utterThis = new SpeechSynthesisUtterance(text);
+            utterThis.lang = 'ko-KR';
+            synth.speak(utterThis);
+        }
+
+        // Listening Quiz Data
+        const listeningQuizzes = [
+            {
+                audioText: '안녕하세요. 저는 한국어를 공부하고 있습니다.',
+                options: ['Hello. I am studying Korean.', 'Good morning. I like coffee.', 'Good night. See you tomorrow.'],
+                correct: 0
+            },
+            {
+                audioText: '오늘 날씨가 정말 좋네요.',
+                options: ['The weather is really nice today.', 'I have a meeting at 3 PM.', 'Let\'s go to the movies.'],
+                correct: 0
+            },
+            {
+                audioText: '이번 주말에 소풍을 갈까요?',
+                options: ['Shall we go for a picnic this weekend?', 'Do you like apples?', 'I finished my homework.'],
+                correct: 0
+            },
+            {
+                audioText: '내일은 중요한 시험이 있습니다.',
+                options: ['I have an important exam tomorrow.', 'She is my best friend.', 'We are going to the park.'],
+                correct: 0
+            },
+            {
+                audioText: '저는 커피를 마시는 것을 좋아해요.',
+                options: ['I like drinking coffee.', 'He plays the guitar.', 'They are watching a movie.'],
+                correct: 0
+            }
+        ];
+
+        const quizContainer = document.getElementById('quiz-container');
+
+        listeningQuizzes.forEach((quiz, index) => {
+            const quizDiv = document.createElement('div');
+            quizDiv.classList.add('quiz-container');
+
+            // Audio Playback Button
+            const audioBtn = document.createElement('button');
+            audioBtn.textContent = `Play Audio ${index + 1}`;
+            audioBtn.classList.add('submit-btn');
+            audioBtn.addEventListener('click', () => {
+                speak(quiz.audioText);
+            });
+
+            // Transcript Toggle Button
+            const transcriptBtn = document.createElement('button');
+            transcriptBtn.textContent = 'Toggle Transcript';
+            transcriptBtn.classList.add('submit-btn');
+            transcriptBtn.style.marginLeft = '10px';
+            transcriptBtn.addEventListener('click', () => {
+                transcriptDiv.style.display = transcriptDiv.style.display === 'none' ? 'block' : 'none';
+            });
+
+            // Transcript Text
+            const transcriptDiv = document.createElement('div');
+            transcriptDiv.classList.add('transcript');
+            transcriptDiv.textContent = quiz.audioText;
+
+            // Quiz Question
+            const question = document.createElement('p');
+            question.textContent = `Question ${index + 1}: What is the correct translation of the audio above?`;
+
+            // Quiz Options
+            const optionsDiv = document.createElement('div');
+            optionsDiv.classList.add('quiz-options');
+            quiz.options.forEach((option, optIndex) => {
+                const label = document.createElement('label');
+                const input = document.createElement('input');
+                input.type = 'radio';
+                input.name = `quiz${index}`;
+                input.value = optIndex;
+                label.appendChild(input);
+                label.appendChild(document.createTextNode(option));
+                optionsDiv.appendChild(label);
+            });
+
+            // Submit Button
+            const submitBtn = document.createElement('button');
+            submitBtn.textContent = 'Submit';
+            submitBtn.classList.add('submit-btn');
+            submitBtn.addEventListener('click', () => {
+                const selected = quizDiv.querySelector(`input[name="quiz${index}"]:checked`);
+                const feedback = quizDiv.querySelector('.feedback');
+                if (selected) {
+                    if (parseInt(selected.value) === quiz.correct) {
+                        feedback.textContent = 'Correct!';
+                        feedback.style.color = '#2ecc71';
+                    } else {
+                        feedback.textContent = `Incorrect. The correct answer is "${quiz.options[quiz.correct]}".`;
+                        feedback.style.color = '#e74c3c';
+                    }
+                } else {
+                    feedback.textContent = 'Please select an answer.';
+                    feedback.style.color = '#e67e22';
+                }
+            });
+
+            // Feedback Paragraph
+            const feedbackP = document.createElement('p');
+            feedbackP.classList.add('feedback');
+
+            // Assemble Quiz Div
+            quizDiv.appendChild(audioBtn);
+            quizDiv.appendChild(transcriptBtn);
+            quizDiv.appendChild(transcriptDiv);
+            quizDiv.appendChild(question);
+            quizDiv.appendChild(optionsDiv);
+            quizDiv.appendChild(submitBtn);
+            quizDiv.appendChild(feedbackP);
+
+            quizContainer.appendChild(quizDiv);
+        });
+    </script>
+</body>
+</html>

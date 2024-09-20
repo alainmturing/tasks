@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intermediate Korean Learning App</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Arial', sans-serif; }
+        .nav-tabs { margin-bottom: 20px; }
+        .word-box { 
+            border: 1px solid #ddd; 
+            padding: 10px; 
+            margin: 10px 0; 
+            cursor: pointer; 
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true">How to Use</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="vocabulary-tab" data-toggle="tab" href="#vocabulary" role="tab" aria-controls="vocabulary" aria-selected="false">Vocabulary</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="listening-tab" data-toggle="tab" href="#listening" role="tab" aria-controls="listening" aria-selected="false">Listening</a>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="myTabContent">
+        <!-- How to Use Section -->
+        <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
+            <h2>How to Use</h2>
+            <p>Welcome! Here's how to use this app:</p>
+            <ul>
+                <li>Click on Vocabulary to learn and hear Korean words.</li>
+                <li>Visit Listening for audio quizzes to test your comprehension.</li>
+            </ul>
+        </div>
+
+        <!-- Vocabulary Section -->
+        <div class="tab-pane fade" id="vocabulary" role="tabpanel" aria-labelledby="vocabulary-tab">
+            <h2>Vocabulary Practice</h2>
+            <div id="wordList" class="row"></div>
+        </div>
+
+        <!-- Listening Quiz Section -->
+        <div class="tab-pane fade" id="listening" role="tabpanel" aria-labelledby="listening-tab">
+            <h2>Listening Quiz</h2>
+            <div id="quiz"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+    const vocabulary = [
+        {kor: "사랑", rom: "sarang", eng: "love"},
+        // Add 49 more words...
+    ];
+
+    const listeningClips = [
+        {audio: "path_to_audio.mp3", transcript: "안녕하세요, 여기는 서울입니다.", options: ["Hello, this is Busan.", "Hello, this is Seoul.", "Goodbye, this is Seoul."]},
+        // Add more quiz items...
+    ];
+
+    // Populate vocabulary
+    vocabulary.forEach(word => {
+        const wordElement = `<div class="col-md-3 word-box" onclick="speak('${word.kor}')">
+            <strong>${word.kor}</strong><br>
+            <span class="romanization hidden">${word.rom}</span><br>
+            <span class="english hidden">${word.eng}</span>
+        </div>`;
+        document.getElementById('wordList').innerHTML += wordElement;
+    });
+
+    // Web Speech API
+    function speak(text) {
+        if ('speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+
+    // Listening quiz setup would follow similar structure with event listeners for audio play, toggle transcript, etc.
+</script>
+
+</body>
+</html>

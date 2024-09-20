@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Intermediate Korean Learning App</title>
+<style>
+    body {
+        font-family: 'Arial', sans-serif;
+        background-color: #f4f4f9;
+        margin: 0;
+        padding: 20px;
+    }
+    .container {
+        max-width: 1200px;
+        margin: auto;
+    }
+    section {
+        background: white;
+        padding: 20px;
+        margin-top: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    h1, h2 { color: #333; }
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+    }
+    .word-card {
+        border: 1px solid #ddd;
+        padding: 10px;
+        text-align: center;
+        cursor: pointer;
+        transition: transform 0.3s;
+    }
+    .word-card:hover { transform: scale(1.05); }
+    .quiz audio { width: 100%; margin-top: 10px; }
+    .quiz .options label { display: block; margin: 10px 0; }
+    .toggle-transcript { cursor: pointer; color: blue; text-decoration: underline; }
+    @media (max-width: 768px) {
+        .grid { grid-template-columns: 1fr 1fr; }
+    }
+</style>
+</head>
+<body>
+<div class="container">
+    <section id="how-to-use">
+        <h2>How to Use</h2>
+        <p>Click on words to hear them, practice with the listening quiz, and toggle transcripts for help.</p>
+    </section>
+    
+    <section id="vocabulary">
+        <h2>Vocabulary Practice</h2>
+        <div class="grid" id="wordGrid"></div>
+    </section>
+
+    <section id="listening-quiz" class="quiz">
+        <h2>Listening Quiz</h2>
+        <audio id="quizAudio" controls></audio>
+        <div id="quizOptions"></div>
+        <p class="toggle-transcript" onclick="toggleTranscript()">Show Transcript</p>
+        <div id="transcript" style="display:none;"></div>
+    </section>
+</div>
+
+<script>
+    const vocabulary = [
+        { korean: "안녕하세요", romanization: "annyeonghaseyo", english: "hello" },
+        // ... 49 more words ...
+    ];
+
+    const wordGrid = document.getElementById('wordGrid');
+    vocabulary.forEach(word => {
+        const card = document.createElement('div');
+        card.className = 'word-card';
+        card.innerHTML = `<h3>${word.korean}</h3><p>${word.romanization}</p><small>${word.english}</small>`;
+        card.onclick = () => {
+            const utterance = new SpeechSynthesisUtterance(word.korean);
+            window.speechSynthesis.speak(utterance);
+        };
+        wordGrid.appendChild(card);
+    });
+
+    const quiz = {
+        audio: './kick.wav',
+        questions: [
+            { question: "What does the speaker say?", options: ["Hello", "Goodbye", "Thank you"], correct: 0, transcript: "안녕하세요, 만나서 반가워요." }
+            // More questions...
+        ]
+    };
+
+    const quizAudio = document.getElementById('quizAudio');
+    const quizOptions = document.getElementById('quizOptions');
+    const transcriptDiv = document.getElementById('transcript');
+
+    quizAudio.src = quiz.audio;
+    quiz.questions.forEach((q, index) => {
+        let optionsHtml = '';
+        q.options.forEach((option, i) => {
+            optionsHtml += `<label><input type="radio" name="q${index}" value="${i}"> ${option}</label>`;
+        });
+        quizOptions.innerHTML += `<p>${q.question}</p>${optionsHtml}`;
+    });
+
+    function toggleTranscript() {
+        transcriptDiv.style.display = transcriptDiv.style.display === 'none' ? 'block' : 'none';
+        transcriptDiv.textContent = quiz.questions[0].transcript; // Assuming one audio file per quiz for simplicity
+    }
+</script>
+</body>
+</html>
