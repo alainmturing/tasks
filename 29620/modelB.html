@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learn Korean Basics</title>
+<style>
+    body { font-family: 'Arial', sans-serif; background-color: #f0f8ff; margin: 0; padding: 0; }
+    .container { max-width: 800px; margin: auto; padding: 20px; }
+    header, footer { background: #4a86e8; color: white; text-align: center; padding: 10px 0; }
+    nav { background: #a0d8ef; text-align: center; }
+    nav button { margin: 5px; padding: 10px; border: none; background: #e0ffff; cursor: pointer; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); gap: 10px; margin: 20px 0; }
+    .hangul-card, .flashcard { background: white; border: 1px solid #ddd; padding: 10px; text-align: center; cursor: pointer; }
+    .quiz-option { margin: 5px; padding: 10px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
+    .correct { background: #90ee90; }
+    .incorrect { background: #ffcccb; }
+    .hidden { display: none; }
+</style>
+</head>
+<body>
+<header>
+    <h1>Learn Korean Basics</h1>
+</header>
+<nav>
+    <button onclick="showSection('instructions')">How to Use</button>
+    <button onclick="showSection('hangul')">Hangul</button>
+    <button onclick="showSection('flashcards')">Flashcards</button>
+    <button onclick="showSection('quiz')">Quiz</button>
+</nav>
+<div class="container">
+    <section id="instructions" class="content-section">
+        <h2>How to Use</h2>
+        <p>Click on each section to learn different aspects of basic Korean. Use the Hangul grid to hear pronunciation, flip flashcards for vocabulary, and test your knowledge with the quiz.</p>
+    </section>
+    <section id="hangul" class="content-section hidden">
+        <h2>Hangul Grid</h2>
+        <div class="grid" id="hangulGrid"></div>
+    </section>
+    <section id="flashcards" class="content-section hidden">
+        <h2>Vocabulary Flashcards</h2>
+        <div id="flashcardContainer"></div>
+    </section>
+    <section id="quiz" class="content-section hidden">
+        <h2>Quiz</h2>
+        <div id="quizContainer"></div>
+    </section>
+</div>
+<footer>
+    <p>© 2023 Learn Korean Basics</p>
+</footer>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    const speech = new SpeechSynthesisUtterance();
+    const hangul = [
+        {char: 'ㄱ', sound: '기역'}, {char: 'ㄴ', sound: '니은'}, /* ... other consonants ... */,
+        {char: 'ㅏ', sound: '아'}, {char: 'ㅑ', sound: '야'}, /* ... other vowels ... */
+    ];
+    const vocabulary = [
+        {korean: '안녕하세요', english: 'Hello'},
+        {korean: '감사합니다', english: 'Thank you'},
+        // ... other words ...
+    ];
+
+    function showSection(sectionId) {
+        $('.content-section').addClass('hidden');
+        $('#' + sectionId).removeClass('hidden');
+    }
+
+    function createHangulGrid() {
+        const grid = $('#hangulGrid');
+        hangul.forEach(h => {
+            const card = $('<div class="hangul-card"></div>').text(h.char).click(() => {
+                speech.text = h.char + (h.char.length === 1 ? '으' : ''); // Pair consonants with '으'
+                window.speechSynthesis.speak(speech);
+            });
+            grid.append(card);
+        });
+    }
+
+    function createFlashcards() {
+        const container = $('#flashcardContainer');
+        vocabulary.forEach(word => {
+            const card = $('<div class="flashcard"></div>');
+            const front = $('<div></div>').text(word.korean);
+            const back = $('<div class="hidden"></div>').text(word.english);
+            card.append(front, back).click(function() {
+                $(this).find('div').toggleClass('hidden');
+            });
+            container.append(card);
+        });
+    }
+
+    function startQuiz() {
+        const quizContainer = $('#quizContainer');
+        quizContainer.empty();
+        const randomWord = vocabulary[Math.floor(Math.random() * vocabulary.length)];
+        quizContainer.append(`<p>What does "${randomWord.korean}" mean?</p>`);
+        const options = [randomWord.english];
+        while(options.length < 4) {
+            const random = vocabulary[Math.floor(Math.random() * vocabulary.length)].english;
+            if(!options.includes(random)) options.push(random);
+        }
+        options.sort(() => Math.random() - 0.5);
+        options.forEach(option => {
+            const optBtn = $('<button class="quiz-option"></button>').text(option).click(function() {
+                $(this).addClass(option === randomWord.english ? 'correct' : 'incorrect');
+            });
+            quizContainer.append(optBtn);
+        });
+    }
+
+    $(document).ready(() => {
+        createHangulGrid();
+        createFlashcards();
+        showSection('instructions');
+        $('#quiz').on('click', '.quiz-option', startQuiz);
+    });
+</script>
+</body>
+</html>
