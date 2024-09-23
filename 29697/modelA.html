@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Data Structures Visualization</title>
+<style>
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f4f4f4; }
+    .container { display: flex; justify-content: space-around; flex-wrap: wrap; }
+    .data-structure { background: white; border: 1px solid #ddd; padding: 20px; margin: 10px; width: 45%; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .controls { margin-top: 10px; }
+    button { padding: 5px 10px; margin: 5px; }
+    #canvas { display: block; margin: auto; }
+    .quiz { margin-top: 20px; padding: 20px; background: #fff; border: 1px solid #ddd; }
+    .result { color: green; font-weight: bold; }
+    .error { color: red; }
+    .animate { transition: all 0.5s; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div id="linkedList" class="data-structure">
+        <h2>Linked List</h2>
+        <canvas id="linkedListCanvas" width="400" height="200"></canvas>
+        <div class="controls">
+            <input type="text" id="llValue" placeholder="Value">
+            <button onclick="addNode()">Add Node</button>
+            <button onclick="removeNode()">Remove Node</button>
+        </div>
+    </div>
+
+    <div id="stack" class="data-structure">
+        <h2>Stack</h2>
+        <canvas id="stackCanvas" width="200" height="300"></canvas>
+        <div class="controls">
+            <input type="text" id="stackValue" placeholder="Value">
+            <button onclick="stackPush()">Push</button>
+            <button onclick="stackPop()">Pop</button>
+        </div>
+    </div>
+
+    <div id="queue" class="data-structure">
+        <h2>Queue</h2>
+        <canvas id="queueCanvas" width="400" height="200"></canvas>
+        <div class="controls">
+            <input type="text" id="queueValue" placeholder="Value">
+            <button onclick="enqueue()">Enqueue</button>
+            <button onclick="dequeue()">Dequeue</button>
+        </div>
+    </div>
+</div>
+
+<div class="quiz">
+    <h2>Quiz</h2>
+    <!-- Quiz questions would be dynamically added here -->
+    <div id="quizQuestions"></div>
+    <button onclick="submitQuiz()">Submit Quiz</button>
+    <div id="quizResult" class="result"></div>
+</div>
+
+<script>
+    // Data structures implementation and visualization would go here
+    function Node(value) {
+        this.value = value;
+        this.next = null;
+    }
+
+    let linkedList = {head: null};
+
+    function addNode() {
+        let value = document.getElementById('llValue').value;
+        let node = new Node(value);
+        if (!linkedList.head) {
+            linkedList.head = node;
+        } else {
+            let current = linkedList.head;
+            while(current.next) current = current.next;
+            current.next = node;
+        }
+        // Visualization update
+        updateLinkedListCanvas();
+    }
+
+    // Similar functions for removeNode, stack operations, queue operations, and quiz handling would follow
+    // along with canvas drawing logic for each data structure
+
+    function updateLinkedListCanvas() {
+        // Canvas update logic
+    }
+
+    function submitQuiz() {
+        // Quiz submission logic
+    }
+
+    // CDN for any potential libraries like jQuery can be added here if needed
+</script>
+
+</body>
+</html>

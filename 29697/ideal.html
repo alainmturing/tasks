@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Data Structures Visualization Tool</title>
+    <style>
+        /* Reset and Base Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        header {
+            background-color: #4a90e2;
+            color: #fff;
+            padding: 20px 0;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        header h1 {
+            font-size: 28px;
+            font-weight: 600;
+        }
+        nav {
+            display: flex;
+            justify-content: center;
+            background-color: #357ABD;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        nav button {
+            background: none;
+            border: none;
+            color: #fff;
+            padding: 15px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        nav button:hover, nav button.active {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        .container {
+            padding: 30px;
+            max-width: 1200px;
+            margin: auto;
+        }
+        .section {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+        .section.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Tooltip Styles */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            color: #4a90e2;
+            margin-left: 5px;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: max-content;
+            max-width: 200px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px 12px;
+            position: absolute;
+            z-index: 1002;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 14px;
+            line-height: 1.4;
+            white-space: normal;
+            word-wrap: break-word;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        .tooltip .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #555 transparent transparent transparent;
+        }
+
+        @media (max-width: 768px) {
+            .tooltip .tooltiptext {
+                width: 160px;
+                font-size: 12px;
+            }
+        }
+
+        /* Control Panel Styles */
+        .controls {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        .controls input[type="text"], .controls input[type="number"], .controls select {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            flex: 1;
+            min-width: 150px;
+        }
+        .controls button {
+            padding: 10px 20px;
+            background-color: #4a90e2;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .controls button:hover {
+            background-color: #357ABD;
+        }
+
+        /* Linked List Styles */
+        .linked-list-container {
+            overflow-x: auto;
+            padding-bottom: 20px;
+        }
+        .linked-list {
+            display: flex;
+            align-items: center;
+            min-height: 100px;
+            position: relative;
+        }
+        .ll-node {
+            background-color: #fff;
+            border: 2px solid #4a90e2;
+            border-radius: 6px;
+            padding: 15px 20px;
+            margin-right: 10px;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .ll-node:last-child {
+            margin-right: 0;
+        }
+
+        /* Stack Styles */
+        .stack-container {
+            position: relative;
+            display: flex;
+            flex-direction: column-reverse;
+            justify-content: flex-start;
+            align-items: center;
+            background-color: #fff;
+            border: 2px solid #4a90e2;
+            border-radius: 8px;
+            padding: 20px;
+            height: 300px;
+            overflow-y: auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .stack-element {
+            width: 80%;
+            background-color: #4a90e2;
+            color: #fff;
+            padding: 15px;
+            margin: 5px 0;
+            border-radius: 4px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.3s, opacity 0.3s;
+        }
+        .stack-bottom-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: #28a745;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        /* Queue Styles */
+        .queue-container {
+            overflow-x: auto;
+            padding-bottom: 20px;
+        }
+        .queue {
+            display: flex;
+            align-items: center;
+            min-height: 100px;
+            position: relative;
+        }
+        .queue-node {
+            background-color: #fff;
+            border: 2px solid #4a90e2;
+            border-radius: 6px;
+            padding: 15px 20px;
+            margin-right: 10px;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        .queue-node:last-child {
+            margin-right: 0;
+        }
+
+        /* Quiz Styles */
+        .quiz-question {
+            margin-bottom: 20px;
+            background-color: #fff;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .quiz-question h3 {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        .quiz-options label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .quiz-options input {
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        .quiz-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .quiz-actions button {
+            padding: 10px 20px;
+            background-color: #4a90e2;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s, transform 0.2s;
+            flex: 1;
+        }
+        .quiz-actions button:hover {
+            background-color: #357ABD;
+            transform: translateY(-2px);
+        }
+        .quiz-actions button:active {
+            transform: translateY(1px);
+        }
+        .quiz-actions button:nth-child(2) {
+            background-color: #6c757d;
+        }
+        .quiz-actions button:nth-child(2):hover {
+            background-color: #5a6268;
+        }
+        .quiz-result {
+            margin-top: 20px;
+            background-color: #fff;
+            padding: 20px;
+            border-left: 5px solid #4a90e2;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .quiz-result p {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .quiz-result.correct {
+            border-color: #28a745;
+        }
+        .quiz-result.incorrect {
+            border-color: #dc3545;
+        }
+
+        /* Toast Styles */
+        .toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1001;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            transition: visibility 0s, opacity 0.5s linear;
+        }
+        .toast.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+
+        .linked-list-container, .queue-container {
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 20px;
+        }
+        .ll-node, .queue-node {
+            display: inline-block;
+            position: relative;
+            margin-right: 60px;
+        }
+
+        /* Animation Styles */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        @keyframes fadeOutUp {
+            from {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+        }
+        @keyframes scaleIn {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        @keyframes scaleOut {
+            from {
+                transform: scale(1);
+                opacity: 1;
+            }
+            to {
+                transform: scale(0);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Data Structures Visualization Tool</h1>
+</header>
+
+<nav>
+    <button class="tablink active" data-tab="linkedList">Linked List</button>
+    <button class="tablink" data-tab="stack">Stack</button>
+    <button class="tablink" data-tab="queue">Queue</button>
+    <button class="tablink" data-tab="quiz">Quiz</button>
+</nav>
+
+<div class="container">
+    <!-- Linked List Section -->
+    <div id="linkedList" class="section active">
+        <h2>Linked List <span class="tooltip">?
+            <span class="tooltiptext">A linked list is a linear data structure where each element is a separate object, called a node.</span>
+        </span></h2>
+        <div class="controls">
+            <input type="text" id="ll-value" placeholder="Enter value">
+            <select id="ll-position">
+                <option value="head">Head</option>
+                <option value="tail">Tail</option>
+            </select>
+            <button onclick="llInsert()">Insert</button>
+            <button onclick="llDelete()">Delete</button>
+        </div>
+        <div class="linked-list-container">
+            <div class="linked-list" id="ll-visual">
+                <!-- Linked List Nodes will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Stack Section -->
+    <div id="stack" class="section">
+        <h2>Stack <span class="tooltip">?
+            <span class="tooltiptext">A stack is a linear data structure which follows a particular order in which operations are performed. Last In First Out (LIFO).</span>
+        </span></h2>
+        <div class="controls">
+            <input type="text" id="stack-input" placeholder="Enter value">
+            <button onclick="stackPush()">Push</button>
+            <button onclick="stackPop()">Pop</button>
+        </div>
+        <div class="stack-container" id="stack-visual">
+            <div class="stack-top-indicator">Top</div>
+            <!-- Stack Elements will appear here -->
+        </div>
+    </div>
+
+    <!-- Queue Section -->
+    <div id="queue" class="section">
+        <h2>Queue <span class="tooltip">?
+            <span class="tooltiptext">A queue is a linear structure which follows a First In First Out (FIFO) order.</span>
+        </span></h2>
+        <div class="controls">
+            <input type="text" id="queue-input" placeholder="Enter value">
+            <button onclick="queueEnqueue()">Enqueue</button>
+            <button onclick="queueDequeue()">Dequeue</button>
+        </div>
+        <div class="queue-container">
+            <div class="queue" id="queue-visual">
+                <!-- Queue Nodes will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Quiz Section -->
+    <div id="quiz" class="section">
+        <h2>Quiz <span class="tooltip">?
+            <span class="tooltiptext">Test your understanding of the data structures.</span>
+        </span></h2>
+        <form id="quiz-form">
+            <div class="quiz-question">
+                <h3>1. What is the time complexity of searching an element in a linked list?</h3>
+                <div class="quiz-options">
+                    <label><input type="radio" name="q1" value="A"> O(1)</label>
+                    <label><input type="radio" name="q1" value="B"> O(n)</label>
+                    <label><input type="radio" name="q1" value="C"> O(log n)</label>
+                    <label><input type="radio" name="q1" value="D"> O(n²)</label>
+                </div>
+            </div>
+            <div class="quiz-question">
+                <h3>2. Which data structure uses LIFO order?</h3>
+                <div class="quiz-options">
+                    <label><input type="radio" name="q2" value="A"> Queue</label>
+                    <label><input type="radio" name="q2" value="B"> Stack</label>
+                    <label><input type="radio" name="q2" value="C"> Linked List</label>
+                    <label><input type="radio" name="q2" value="D"> Array</label>
+                </div>
+            </div>
+            <div class="quiz-question">
+                <h3>3. What is the primary advantage of a linked list over an array?</h3>
+                <div class="quiz-options">
+                    <label><input type="radio" name="q3" value="A"> Constant-time access to elements</label>
+                    <label><input type="radio" name="q3" value="B"> Dynamic size and efficient insertion/deletion</label>
+                    <label><input type="radio" name="q3" value="C"> Better cache locality</label>
+                    <label><input type="radio" name="q3" value="D"> Lower memory usage</label>
+                </div>
+            </div>
+            <div class="quiz-question">
+                <h3>4. What is the primary operation of a queue?</h3>
+                <div class="quiz-options">
+                    <label><input type="radio" name="q4" value="A"> Push and Pop</label>
+                    <label><input type="radio" name="q4" value="B"> Insert and Delete</label>
+                    <label><input type="radio" name="q4" value="C"> Enqueue and Dequeue</label>
+                    <label><input type="radio" name="q4" value="D"> Add and Remove</label>
+                </div>
+            </div>
+            <div class="quiz-question">
+                <h3>5. Which data structure would be most efficient for implementing a "undo" functionality in a text editor?</h3>
+                <div class="quiz-options">
+                    <label><input type="radio" name="q5" value="A"> Queue</label>
+                    <label><input type="radio" name="q5" value="B"> Stack</label>
+                    <label><input type="radio" name="q5" value="C"> Linked List</label>
+                    <label><input type="radio" name="q5" value="D"> Array</label>
+                </div>
+            </div>
+            <div class="quiz-actions">
+                <button type="button" onclick="submitQuiz()">Submit</button>
+                <button type="button" onclick="retakeQuiz()">Retake Quiz</button>
+            </div>
+        </form>
+        <div class="quiz-result" id="quiz-result" style="display:none;"></div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="toast"></div>
+
+<script>
+    // Navigation Tabs
+    const tabs = document.querySelectorAll('.tablink');
+    const sections = document.querySelectorAll('.section');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            sections.forEach(sec => {
+                if(sec.id === tab.dataset.tab){
+                    sec.classList.add('active');
+                } else {
+                    sec.classList.remove('active');
+                }
+            });
+        });
+    });
+
+    /* ------------------ Linked List Implementation ------------------ */
+    let llHead = null;
+
+    class LLNode {
+        constructor(value) {
+            this.value = value;
+            this.next = null;
+        }
+    }
+
+    function llInsert() {
+        const val = document.getElementById('ll-value').value.trim();
+        const position = document.getElementById('ll-position').value;
+        if(val === '') { alert('Please enter a value'); return; }
+        const newNode = new LLNode(val);
+        if(position === 'head') {
+            newNode.next = llHead;
+            llHead = newNode;
+        } else if(position === 'tail') {
+            if(!llHead) {
+                llHead = newNode;
+            } else {
+                let current = llHead;
+                while(current.next) {
+                    current = current.next;
+                }
+                current.next = newNode;
+            }
+        }
+        document.getElementById('ll-value').value = '';
+        renderLinkedList();
+    }
+
+    function llDelete() {
+        const position = document.getElementById('ll-position').value;
+        if(!llHead) { alert('Linked List is empty'); return; }
+        if(position === 'head') {
+            llHead = llHead.next;
+        } else if(position === 'tail') {
+            if(!llHead.next) {
+                llHead = null;
+            } else {
+                let current = llHead;
+                while(current.next.next) {
+                    current = current.next;
+                }
+                current.next = null;
+            }
+        }
+        renderLinkedList();
+    }
+
+    function renderLinkedList() {
+        const container = document.getElementById('ll-visual');
+        container.innerHTML = '';
+        let current = llHead;
+        while(current) {
+            const nodeContainer = document.createElement('div');
+            nodeContainer.className = 'll-node';
+            
+            const node = document.createElement('div');
+            node.className = 'll-node-content';
+            node.textContent = current.value;
+            nodeContainer.appendChild(node);
+            
+            container.appendChild(nodeContainer);
+            current = current.next;
+        }
+        animateLinkedList();
+    }
+
+    function animateLinkedList() {
+        const nodes = document.querySelectorAll('.ll-node');
+        nodes.forEach((node, index) => {
+            node.style.animation = `scaleIn 0.3s ${index * 0.1}s forwards`;
+        });
+    }
+
+    /* ------------------ Stack Implementation ------------------ */
+    let stack = [];
+
+    function stackPush() {
+        const val = document.getElementById('stack-input').value.trim();
+        if(val === '') { alert('Please enter a value'); return; }
+        stack.push(val);
+        document.getElementById('stack-input').value = '';
+        renderStack();
+    }
+
+    function stackPop() {
+        if(stack.length === 0) { alert('Stack is empty'); return; }
+        const topElement = document.querySelector('.stack-element:last-child');
+        topElement.style.animation = 'fadeOutUp 0.3s forwards';
+        setTimeout(() => {
+            stack.pop();
+            renderStack();
+        }, 300);
+    }
+
+    function renderStack() {
+        const container = document.getElementById('stack-visual');
+        container.innerHTML = '<div class="stack-bottom-indicator">Bottom</div>';
+        stack.slice().reverse().forEach((item, index) => {
+            const element = document.createElement('div');
+            element.className = 'stack-element';
+            element.textContent = item;
+            element.style.animation = `fadeInDown 0.3s ${index * 0.1}s forwards`;
+            container.appendChild(element);
+        });
+        container.scrollTop = container.scrollHeight;
+    }
+
+    /* ------------------ Queue Implementation ------------------ */
+    let queue = [];
+
+    function queueEnqueue() {
+        const val = document.getElementById('queue-input').value.trim();
+        if(val === '') { alert('Please enter a value'); return; }
+        queue.push(val);
+        document.getElementById('queue-input').value = '';
+        renderQueue();
+    }
+
+    function queueDequeue() {
+        if(queue.length === 0) { alert('Queue is empty'); return; }
+        queue.shift();
+        renderQueue();
+    }
+
+    function renderQueue() {
+        const container = document.getElementById('queue-visual');
+        container.innerHTML = '';
+        queue.forEach((item, index) => {
+            const nodeContainer = document.createElement('div');
+            nodeContainer.className = 'queue-node';
+            
+            const node = document.createElement('div');
+            node.className = 'queue-node-content';
+            node.textContent = item;
+            nodeContainer.appendChild(node);
+            
+            container.appendChild(nodeContainer);
+        });
+        animateQueue();
+    }
+
+    function animateQueue() {
+        const nodes = document.querySelectorAll('.queue-node');
+        nodes.forEach((node, index) => {
+            node.style.animation = `scaleIn 0.3s ${index * 0.1}s forwards`;
+        });
+    }
+
+    /* ------------------ Quiz Implementation ------------------ */
+    const correctAnswers = {
+        q1: 'B',
+        q2: 'B',
+        q3: 'B',
+        q4: 'C',
+        q5: 'B'
+    };
+
+    function submitQuiz() {
+        let score = 0;
+        let total = Object.keys(correctAnswers).length;
+        let results = '';
+        for(let q in correctAnswers) {
+            const userAns = document.querySelector(`input[name="${q}"]:checked`);
+            if(userAns) {
+                if(userAns.value === correctAnswers[q]) {
+                    score++;
+                    results += `<p style="color: #28a745;">Question ${q.slice(1)}: Correct</p>`;
+                } else {
+                    results += `<p style="color: #dc3545;">Question ${q.slice(1)}: Incorrect (Your answer: ${userAns.value}, Correct answer: ${correctAnswers[q]})</p>`;
+                }
+            } else {
+                results += `<p style="color: #dc3545;">Question ${q.slice(1)}: No answer selected (Correct answer: ${correctAnswers[q]})</p>`;
+            }
+        }
+        const resultDiv = document.getElementById('quiz-result');
+        resultDiv.innerHTML = `<h3>Your Score: ${score} / ${total}</h3>` + results;
+        resultDiv.style.display = 'block';
+        // Scroll to result
+        resultDiv.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function retakeQuiz() {
+        document.getElementById('quiz-form').reset();
+        document.getElementById('quiz-result').style.display = 'none';
+    }
+
+    /* ------------------ Toast Notification ------------------ */
+    function showToast(message) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = 'toast show';
+        setTimeout(() => { toast.className = toast.className.replace('show', ''); }, 3000);
+    }
+
+    /* ------------------ Initialize ------------------ */
+    // Initial Render
+    renderLinkedList();
+    renderStack();
+    renderQueue();
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Structures Visualization</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+<style>
+    .structure-container {
+        margin: 20px 0;
+    }
+    .node, .stack-item, .queue-item {
+        border: 2px solid #3273dc;
+        padding: 10px;
+        margin: 5px;
+        display: inline-block;
+        transition: all 0.3s ease;
+    }
+    .pointer {
+        font-size: 2em;
+        vertical-align: middle;
+    }
+    .hidden {
+        visibility: hidden;
+    }
+    .quiz-question {
+        margin-bottom: 10px;
+    }
+    .correct {
+        background-color: #90ee90;
+    }
+    .incorrect {
+        background-color: #ffcccb;
+    }
+</style>
+</head>
+<body>
+
+<section class="section">
+    <div class="container">
+        <h1 class="title">Data Structures Visualization</h1>
+        <div id="structures" class="tabs is-centered">
+            <ul>
+                <li class="is-active"><a data-target="linked-list">Linked List</a></li>
+                <li><a data-target="stack">Stack</a></li>
+                <li><a data-target="queue">Queue</a></li>
+            </ul>
+        </div>
+        
+        <div id="linked-list" class="structure-container">
+            <h2 class="subtitle">Linked List</h2>
+            <!-- Linked List Implementation -->
+        </div>
+        
+        <div id="stack" class="structure-container" style="display:none;">
+            <h2 class="subtitle">Stack</h2>
+            <!-- Stack Implementation -->
+        </div>
+        
+        <div id="queue" class="structure-container" style="display:none;">
+            <h2 class="subtitle">Queue</h2>
+            <!-- Queue Implementation -->
+        </div>
+        
+        <div id="quiz" class="section">
+            <h2 class="subtitle">Test Your Knowledge</h2>
+            <!-- Quiz Implementation -->
+        </div>
+    </div>
+</section>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Structure switching
+    $('#structures ul li a').on('click', function() {
+        $('.structure-container').hide();
+        $('#' + $(this).data('target')).show();
+        $('#structures li').removeClass('is-active');
+        $(this).parent().addClass('is-active');
+    });
+
+    // Data Structure Implementations
+    function LinkedList() {
+        this.head = null;
+        this._length = 0;
+        // Implementation of LinkedList, Stack, and Queue would go here with methods for add, remove, etc.
+    }
+
+    function animateAdd(element, container, value) {
+        $(element).text(value).hide().appendTo(container).fadeIn();
+    }
+
+    // Quiz functionality
+    function createQuiz() {
+        const questions = [
+            {q: "What operation does a stack primarily use?", a: ["Push and Pop", "Enqueue and Dequeue", "Insert and Delete"], correct: 0},
+            // More questions...
+        ];
+
+        let quizHTML = '';
+        questions.forEach((question, index) => {
+            quizHTML += `<div class="quiz-question"><p>${question.q}</p>
+                ${question.a.map((answer, idx) => `<label><input type="radio" name="q${index}" value="${idx}"> ${answer}</label><br>`).join('')}
+            </div>`;
+        });
+
+        $('#quiz').html(quizHTML + '<button class="button is-primary" id="submitQuiz">Submit</button><div id="quizResult"></div>');
+
+        $('#submitQuiz').on('click', function() {
+            let score = 0;
+            questions.forEach((question, index) => {
+                const selected = $(`input[name="q${index}"]:checked`).val();
+                if (selected == question.correct) {
+                    score++;
+                    $(`input[name="q${index}"]`).parent().addClass('correct');
+                } else if (selected !== undefined) {
+                    $(`input[name="q${index}"]`).parent().addClass('incorrect');
+                }
+            });
+            $('#quizResult').html(`You scored ${score} out of ${questions.length}.`);
+        });
+    }
+
+    createQuiz();
+    // Additional setup for linked list, stack, and queue visualizations would be here.
+});
+</script>
+
+</body>
+</html>
