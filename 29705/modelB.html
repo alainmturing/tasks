@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bubble Popper</title>
+<style>
+body { margin: 0; background: #e0f7fa; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: 'Arial', sans-serif; }
+#gameCanvas { background: #fff; border: 2px solid #0097A7; }
+#ui { position: absolute; text-align: center; width: 100%; }
+button { margin: 10px; padding: 10px 20px; font-size: 1em; cursor: pointer; background-color: #00BCD4; color: white; border: none; border-radius: 5px; }
+#score, #lives { font-size: 1.5em; color: #006064; }
+</style>
+</head>
+<body>
+<div id="ui">
+    <div id="levelSelect" style="display: block;">
+        <button onclick="startGame('easy')">Easy</button>
+        <button onclick="startGame('medium')">Medium</button>
+        <button onclick="startGame('hard')">Hard</button>
+    </div>
+    <div id="gameInfo" style="display: none;">
+        <span id="score">Score: 0</span> | <span id="lives">Lives: 3</span>
+    </div>
+</div>
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const ui = document.getElementById('ui');
+const levelSelect = document.getElementById('levelSelect');
+const gameInfo = document.getElementById('gameInfo');
+const scoreDisplay = document.getElementById('score');
+const livesDisplay = document.getElementById('lives');
+
+let bubbles = [];
+let score = 0;
+let lives = 3;
+let gameLoop;
+let audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let popSoundBuffer;
+
+// Preload sound
+function loadSound(url) {
+    fetch(url)
+    .then(response => response.arrayBuffer())
+    .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+    .then(buffer => { popSoundBuffer = buffer; });
+}
+loadSound('pop.mp3');
+
+function playSound(buffer) {
+    let source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    source.start(0);
+}
+
+function Bubble(x, y, radius, clicksToPop) {
+    this.x = x;
+    this.y = y;
+    this.radius = radius;
+    this.clicksToPop = clicksToPop;
+    this.clicksReceived = 0;
+    
+    this.draw = function() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(100, 149, 237, 0.7)`;
+        ctx.fill();
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = `${this.radius * 0.6}px Arial`;
+        ctx.fillText(this.clicksToPop - this.clicksReceived, this.x, this.y);
+    };
+
+    this.update = function(speed) {
+        this.y -= speed;
+    };
+}
+
+function startGame(difficulty) {
+    levelSelect.style.display = 'none';
+    gameInfo.style.display = 'block';
+    let speed, clicksRange;
+    switch(difficulty) {
+        case 'easy': speed = 1; clicksRange = [1, 2]; break;
+        case 'medium': speed = 1.5; clicksRange = [2, 3]; break;
+        case 'hard': speed = 2; clicksRange = [3, 4]; break;
+    }
+
+    function createBubble() {
+        let radius = Math.random() * 30 + 20;
+        let x = Math.random() * (canvas.width - radius * 2) + radius;
+        let y = canvas.height + radius;
+        let clicksToPop = Math.floor(Math.random() * (clicksRange[1] - clicksRange[0] + 1)) + clicksRange[0];
+        bubbles.push(new Bubble(x, y, radius, clicksToPop));
+    }
+
+    function gameOver() {
+        clearInterval(gameLoop);
+        alert('Game Over! Your score: ' + score);
+        location.reload();
+    }
+
+    function updateGame() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        if(Math.random() < 0.02) createBubble();
+        
+        for(let i = bubbles.length - 1; i >= 0; i--) {
+            let bubble = bubbles[i];
+            bubble.update(speed);
+            
+            if(bubble.y + bubble.radius < 0) {
+                bubbles.splice(i, 1);
+                if(--lives <= 0) gameOver();
+                livesDisplay.textContent = `Lives: ${lives}`;
+            }
+            
+            bubble.draw();
+        }
+
+        scoreDisplay.textContent = `Score: ${Math.max(score, 0)}`;
+    }
+
+    canvas.onclick = function(event) {
+        let rect = canvas.getBoundingClientRect();
+        let clickX = event.clientX - rect.left;
+        let clickY = event.clientY - rect.top;
+        
+        for(let i = bubbles.length - 1; i >= 0; i--) {
+            let b = bubbles[i];
+            if(Math.hypot(clickX - b.x, clickY - b.y) < b.radius) {
+                b.clicksReceived++;
+                if(b.clicksReceived >= b.clicksToPop) {
+                    score += 5;
+                    playSound(popSoundBuffer);
+                    bubbles.splice(i, 1);
+                    lives = 3; // Reset lives on successful pop
+                }
+                break;
+            }
+        }
+    };
+
+    gameLoop = setInterval(updateGame, 1000/60);
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bubble Pop Game</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to top, #a8edea, #fed6e3);
+            overflow: hidden;
+        }
+        #level-selection, #game-container, #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        #level-selection.active, #game-container.active, #game-over.active {
+            display: flex;
+        }
+        .level-button, #restart-button {
+            padding: 15px 30px;
+            margin: 10px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: #ff7f50;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        .level-button:hover, #restart-button:hover {
+            background-color: #ff6347;
+        }
+        #game-info {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 50px;
+            font-size: 24px;
+            color: #333;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 15px 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        #score, #lives {
+            font-weight: bold;
+            color: #ff6347;
+        }
+        .heart {
+            color: #ff4757;
+            font-size: 28px;
+            transition: opacity 0.3s;
+        }
+        #game-area {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            user-select: none;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        #game-over {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            flex-direction: column;
+        }
+        #game-over h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        #game-over p {
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Level Selection Screen -->
+    <div id="level-selection" class="active">
+        <h1>Select Difficulty Level</h1>
+        <button class="level-button" data-level="Easy">Easy</button>
+        <button class="level-button" data-level="Medium">Medium</button>
+        <button class="level-button" data-level="Hard">Hard</button>
+    </div>
+
+    <!-- Game Container -->
+    <div id="game-container">
+        <div id="game-info">
+            <div>Score: <span id="score">0</span></div>
+            <div>Lives: <span id="lives"></span></div>
+        </div>
+        <div id="game-area"></div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="game-over">
+        <h1>Game Over</h1>
+        <p>Your Score: <span id="final-score">0</span></p>
+        <button id="restart-button">Restart</button>
+    </div>
+
+    <script>
+        // Game Variables
+        const levelSelection = document.getElementById('level-selection');
+        const gameContainer = document.getElementById('game-container');
+        const gameOverScreen = document.getElementById('game-over');
+        const gameArea = document.getElementById('game-area');
+        const scoreDisplay = document.getElementById('score');
+        const livesDisplay = document.getElementById('lives');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const restartButton = document.getElementById('restart-button');
+        const levelButtons = document.querySelectorAll('.level-button');
+
+        let level = 'Easy';
+        let score = 0;
+        let lives = 3;
+        let consecutiveMisses = 0;
+        let bubbleInterval;
+        let popSound;
+
+        // Web Audio API Setup for Popping Sound
+        function setupAudio() {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const audioCtx = new AudioContext();
+
+            // Simple pop sound using oscillator
+            popSound = () => {
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime);
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.start();
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.2);
+                oscillator.stop(audioCtx.currentTime + 0.2);
+            };
+        }
+
+        // Initialize Audio
+        setupAudio();
+
+        // Level Settings
+        const levelSettings = {
+            'Easy': { minClicks: 1, maxClicks: 2, spawnRate: 2000, speed: 8000 },
+            'Medium': { minClicks: 2, maxClicks: 3, spawnRate: 1500, speed: 6000 },
+            'Hard': { minClicks: 3, maxClicks: 4, spawnRate: 1000, speed: 4000 }
+        };
+
+        // Start Game
+        function startGame(selectedLevel) {
+            level = selectedLevel;
+            score = 0;
+            lives = 3;
+            consecutiveMisses = 0;
+            updateScore();
+            updateLives();
+            levelSelection.classList.remove('active');
+            gameOverScreen.classList.remove('active');
+            gameContainer.classList.add('active');
+            spawnBubbles();
+        }
+
+        // Update Score Display
+        function updateScore() {
+            scoreDisplay.textContent = score;
+        }
+
+        // Update Lives Display
+        function updateLives() {
+            livesDisplay.innerHTML = '♥'.repeat(lives) + '<span style="opacity: 0.3;">♥</span>'.repeat(3 - lives);
+        }
+
+        // Spawn Bubbles at Intervals
+        function spawnBubbles() {
+            const settings = levelSettings[level];
+            bubbleInterval = setInterval(() => {
+                createBubble();
+            }, settings.spawnRate);
+        }
+
+        // Create a Single Bubble
+        function createBubble() {
+            const settings = levelSettings[level];
+            const bubble = document.createElement('div');
+            const size = Math.floor(Math.random() * 50) + 50; // 50-100px
+            const x = Math.floor(Math.random() * (window.innerWidth - size));
+            const initialY = window.innerHeight;
+
+            // Determine number of clicks required
+            const clicksRequired = Math.floor(Math.random() * (settings.maxClicks - settings.minClicks + 1)) + settings.minClicks;
+
+            // Style the bubble
+            bubble.classList.add('bubble');
+            bubble.style.width = `${size}px`;
+            bubble.style.height = `${size}px`;
+            bubble.style.backgroundColor = getRandomColor();
+            bubble.style.left = `${x}px`;
+            bubble.style.top = `${initialY}px`;
+            bubble.dataset.clicks = clicksRequired;
+
+            // Add click event
+            bubble.addEventListener('click', () => popBubble(bubble));
+
+            // Add number to bubble
+            bubble.textContent = clicksRequired;
+
+            gameArea.appendChild(bubble);
+
+            // Animate bubble movement
+            bubble.animate([
+                { top: `${initialY}px` },
+                { top: `-${size}px` }
+            ], {
+                duration: settings.speed,
+                easing: 'linear'
+            }).onfinish = () => {
+                if (gameArea.contains(bubble)) {
+                    gameArea.removeChild(bubble);
+                    handleMiss();
+                }
+            };
+        }
+
+        // Handle Bubble Pop
+        function popBubble(bubble) {
+            const clicksLeft = parseInt(bubble.dataset.clicks);
+            if (clicksLeft > 1) {
+                bubble.dataset.clicks = clicksLeft - 1;
+                bubble.textContent = clicksLeft - 1;
+                bubble.style.transform = 'scale(0.9)';
+                setTimeout(() => bubble.style.transform = 'scale(1)', 100);
+            } else {
+                // Pop the bubble
+                gameArea.removeChild(bubble);
+                score += 5;
+                updateScore();
+                popSound();
+                consecutiveMisses = 0;
+                lives = 3; // Reset lives to 3 after a successful pop
+                updateLives();
+            }
+        }
+
+        // Handle Missed Bubble
+        function handleMiss() {
+            score = Math.max(0, score - 10);
+            updateScore();
+            consecutiveMisses += 1;
+            lives -= 1;
+            updateLives();
+            if (lives <= 0) {
+                endGame();
+            }
+        }
+
+        // End Game
+        function endGame() {
+            clearInterval(bubbleInterval);
+            // Remove all remaining bubbles
+            const bubbles = document.querySelectorAll('.bubble');
+            bubbles.forEach(bubble => gameArea.removeChild(bubble));
+            finalScoreDisplay.textContent = score;
+            gameContainer.classList.remove('active');
+            gameOverScreen.classList.add('active');
+        }
+
+        // Restart Game
+        restartButton.addEventListener('click', () => {
+            startGame(level);
+        });
+
+        // Level Selection
+        levelButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const selectedLevel = button.dataset.level;
+                startGame(selectedLevel);
+            });
+        });
+
+        // Utility: Get Random Color
+        function getRandomColor() {
+            const colors = ['#FF6B6B', '#6BCB77', '#4D96FF', '#FFD93D', '#FF9671', '#C06C84'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        // Handle Window Resize to adjust game area
+        window.addEventListener('resize', () => {
+            // Optional: Adjust game elements if necessary
+        });
+
+    </script>
+</body>
+</html>

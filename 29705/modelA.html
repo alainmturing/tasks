@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bubble Popper</title>
+<style>
+    body, html {
+        height: 100%;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #f0f8ff;
+        font-family: 'Arial', sans-serif;
+    }
+    #game-container {
+        text-align: center;
+        width: 80%;
+        max-width: 600px;
+        border: 2px solid #4a86e8;
+        border-radius: 10px;
+        padding: 20px;
+        background: white;
+    }
+    #bubble-area {
+        height: 400px;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid #ccc;
+    }
+    .bubble {
+        position: absolute;
+        cursor: pointer;
+        transition: transform 0.1s;
+    }
+    .bubble:hover {
+        transform: scale(1.1);
+    }
+    #score, #lives {
+        font-size: 1.2em;
+        margin: 10px 0;
+    }
+    button {
+        margin: 10px;
+        padding: 10px 20px;
+        font-size: 1em;
+    }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+    <h1>Bubble Popper</h1>
+    <div id="level-select">
+        <button onclick="startGame('easy')">Easy</button>
+        <button onclick="startGame('medium')">Medium</button>
+        <button onclick="startGame('hard')">Hard</button>
+    </div>
+    <div id="bubble-area"></div>
+    <div id="score">Score: 0</div>
+    <div id="lives">Lives: 3</div>
+</div>
+
+<script>
+    const bubbleArea = document.getElementById('bubble-area');
+    let score = 0, lives = 3, gameInterval, difficulty = { easy: 1, medium: 2, hard: 3 };
+
+    function startGame(level) {
+        document.getElementById('level-select').style.display = 'none';
+        const clicksToPop = difficulty[level] + (level === 'easy' ? 0 : 1);
+        gameInterval = setInterval(() => createBubble(clicksToPop), 1500 - (level === 'hard' ? 500 : level === 'medium' ? 250 : 0));
+    }
+
+    function createBubble(clicks) {
+        const bubble = document.createElementNS("http://www.w3.org/2000/svg", 'svg');
+        bubble.innerHTML = `<circle cx="50" cy="50" r="25" fill="rgba(74, 134, 232, 0.7)" class="bubble" data-clicks="${clicks}">
+        <text x="50%" y="50%" text-anchor="middle" dy=".3em" font-size="20" fill="white">${clicks}</text></circle>`;
+        bubble.style.left = `${Math.random() * (bubbleArea.offsetWidth - 50)}px`;
+        bubble.style.top = `${bubbleArea.offsetHeight}px`;
+        bubbleArea.appendChild(bubble);
+
+        // Move bubble up
+        let pos = bubbleArea.offsetHeight;
+        const moveInterval = setInterval(() => {
+            if (pos < 0) {
+                clearInterval(moveInterval);
+                bubbleArea.removeChild(bubble);
+                loseLife();
+            } else {
+                pos -= 1;
+                bubble.style.top = `${pos}px`;
+            }
+        }, 10);
+
+        bubble.onclick = function() { popBubble(bubble, clicks); };
+    }
+
+    function popBubble(bubble, clicks) {
+        const audio = new Audio('https://actions.google.com/sounds/v1/impacts/balloon_pop.ogg'); // Using Google's sound library as an example
+        audio.play();
+        if (bubble.dataset.clicks > 1) {
+            bubble.dataset.clicks = parseInt(bubble.dataset.clicks) - 1;
+            bubble.querySelector('text').textContent = bubble.dataset.clicks;
+        } else {
+            bubbleArea.removeChild(bubble);
+            updateScore(5);
+        }
+    }
+
+    function loseLife() {
+        lives--;
+        if (lives <= 0) {
+            clearInterval(gameInterval);
+            alert('Game Over! Your score: ' + score);
+            location.reload(); // Reset game
+        } else {
+            document.getElementById('lives').textContent = `Lives: ${lives}`;
+            updateScore(-10);
+        }
+    }
+
+    function updateScore(points) {
+        score = Math.max(0, score + points); // Score doesn't go below 0
+        document.getElementById('score').textContent = `Score: ${score}`;
+    }
+</script>
+
+</body>
+</html>
