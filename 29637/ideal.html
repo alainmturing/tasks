@@ -97,6 +97,16 @@
             transform: scale(1.1);
         }
 
+        .keyboard button.clicked {
+            animation: buttonClick 0.3s ease-in-out;
+        }
+
+        @keyframes buttonClick {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
         .hint-btn, .play-again-btn {
             padding: 10px 20px;
             margin: 10px;
@@ -323,8 +333,8 @@
         // Word lists
         const WORDS = {
             animals: ['elephant', 'giraffe', 'kangaroo', 'alligator', 'dolphin', 'hippopotamus', 'penguin', 'rhinoceros', 'tortoise', 'crocodile'],
-            countries: ['canada', 'brazil', 'germany', 'australia', 'india', 'norway', 'japan', 'mexico', 'switzerland', 'southafrica'],
-            foods: ['pizza', 'sushi', 'hamburger', 'pasta', 'tacos', 'icecream', 'chocolate', 'salad', 'noodles', 'steak']
+            countries: ['switzerland', 'australia', 'argentina', 'indonesia', 'singapore', 'netherlands', 'portugal', 'tanzania', 'venezuela', 'bangladesh'],
+            foods: ['spaghetti', 'hamburger', 'chocolate', 'blueberry', 'pineapple', 'avocado', 'broccoli', 'sandwich', 'asparagus', 'strawberry']
         };
 
         // Categories
@@ -332,9 +342,9 @@
 
         // Difficulty settings
         const DIFFICULTY = {
-            easy: { maxWrong: 6, wordLength: [8, Infinity] },
-            medium: { maxWrong: 6, wordLength: [5, 7] },
-            hard: { maxWrong: 6, wordLength: [3, 4] }
+            easy: { maxWrong: 6, wordLength: [10, 12], scoreIncrement: 5 },
+            medium: { maxWrong: 4, wordLength: [7, 9], scoreIncrement: 10 },
+            hard: { maxWrong: 2, wordLength: [5, 8], scoreIncrement: 15 }
         };
 
         // Game state
@@ -418,11 +428,13 @@
         // Update the SVG based on wrong guesses
         function updateSVG() {
             const parts = ['head', 'body', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg'];
-            if (wrongGuesses > 0 && wrongGuesses <= parts.length) {
-                const part = svgElements[parts[wrongGuesses - 1]];
+            const totalParts = parts.length;
+            const partsToShow = Math.min(Math.ceil((wrongGuesses / maxWrong) * totalParts), totalParts);
+
+            for (let i = 0; i < partsToShow; i++) {
+                const part = svgElements[parts[i]];
                 part.style.display = 'block';
-                
-                // Only animate if the part is not already visible
+
                 if (part.getAttribute('data-animated') !== 'true') {
                     part.style.strokeDasharray = "1000";
                     part.style.strokeDashoffset = "1000";
@@ -433,7 +445,7 @@
                     ], {
                         duration: 500,
                         easing: 'ease-out',
-                        fill: 'forwards'  // Keeps the final state of the animation
+                        fill: 'forwards'
                     });
                     
                     animation.onfinish = () => {
@@ -442,11 +454,6 @@
                         part.setAttribute('data-animated', 'true');
                     };
                 }
-            }
-            
-            // Ensure all previous parts are visible
-            for (let i = 0; i < wrongGuesses && i < parts.length; i++) {
-                svgElements[parts[i]].style.display = 'block';
             }
         }
 
@@ -472,19 +479,23 @@
             if (button) {
                 button.disabled = true;
                 button.classList.add('active');
+                button.classList.add('clicked');
+                setTimeout(() => button.classList.remove('clicked'), 300);
             }
 
             if (secretWord.includes(letter)) {
                 playSound('correct');
+                let correctGuesses = 0;
                 secretWord.split('').forEach((l, idx) => {
                     if (l === letter) {
                         displayedWord[idx] = letter;
                         const spans = wordDisplay.querySelectorAll('span');
                         spans[idx].textContent = letter.toUpperCase();
                         spans[idx].classList.add('letter-reveal');
+                        correctGuesses++;
                     }
                 });
-                score += 10;
+                score += DIFFICULTY[selectedDifficulty].scoreIncrement * correctGuesses;
                 scoreDisplay.textContent = `Score: ${score}`;
                 checkWin();
             } else {
@@ -497,10 +508,9 @@
                 checkLose();
             }
 
-            // Add a small delay before allowing the next guess
             setTimeout(() => {
                 isGuessing = false;
-            }, 200); // 200ms delay, adjust as needed
+            }, 200);
         }
 
         // Check if the player has won
@@ -579,6 +589,7 @@
                 element.style.display = 'none';
                 element.style.strokeDasharray = "";
                 element.style.strokeDashoffset = "";
+                element.removeAttribute('data-animated');
             });
             displayWord();
             selectionArea.style.display = 'none';
