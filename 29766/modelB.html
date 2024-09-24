@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Color Switcher</title>
+<style>
+    body { 
+        margin: 0; 
+        padding: 0; 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        height: 100vh; 
+        background: linear-gradient(to right, #ff9966, #ff5e62); 
+    }
+    #gameCanvas {
+        border: 2px solid #333;
+        background: #f0f0f0;
+    }
+    #instructions {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: rgba(255, 255, 255, 0.8);
+        padding: 10px;
+        border-radius: 5px;
+    }
+    #score {
+        position: absolute;
+        top: 10px;
+        width: 100%;
+        text-align: center;
+        font-size: 24px;
+        color: #333;
+    }
+    .levelButton, #restartButton {
+        padding: 10px 20px;
+        margin: 10px;
+        cursor: pointer;
+        background-color: #4CAF50;
+        border: none;
+        color: white;
+        text-align: center;
+        display: inline-block;
+        font-size: 16px;
+    }
+    #levelSelection {
+        position: absolute;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+</style>
+</head>
+<body>
+<div id="levelSelection">
+    <button class="levelButton" onclick="startGame('easy')">Easy</button>
+    <button class="levelButton" onclick="startGame('medium')">Medium</button>
+    <button class="levelButton" onclick="startGame('hard')">Hard</button>
+</div>
+<div id="instructions">Press Space or Click to Switch Color</div>
+<div id="score">Score: 0</div>
+<canvas id="gameCanvas" width="800" height="400"></canvas>
+<button id="restartButton" style="display:none;" onclick="location.reload()">Restart</button>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Game variables
+    let player, obstacles = [], score = 0, gameLoop, currentLevel, colors, speed;
+
+    // Sound effects
+    const colorChangeSound = new Audio('path_to_color_change_sound.mp3'); // Replace with actual path or use base64
+    const collisionSound = new Audio('path_to_collision_sound.mp3'); // Replace with actual path or use base64
+
+    function loadAudio(buffer, audio) {
+        audioContext.decodeAudioData(buffer, function(decodedData) {
+            audio.src = URL.createObjectURL(new Blob([decodedData]));
+        });
+    }
+
+    // Initialize game based on level
+    function startGame(level) {
+        document.getElementById('levelSelection').style.display = 'none';
+        document.getElementById('restartButton').style.display = 'none';
+        switch(level) {
+            case 'easy': colors = ['red', 'blue', 'yellow']; speed = 2; break;
+            case 'medium': colors = ['red', 'blue', 'yellow', 'green']; speed = 4; break;
+            case 'hard': colors = ['red', 'blue', 'yellow', 'green', 'purple']; speed = 6; break;
+        }
+        currentLevel = level;
+        resetGame();
+        gameLoop = setInterval(updateGameArea, 20);
+    }
+
+    function resetGame() {
+        player = {x: 50, y: canvas.height / 2, color: colors[0]};
+        obstacles = [];
+        score = 0;
+        if (!gameLoop) {
+            gameLoop = setInterval(updateGameArea, 20);
+        }
+    }
+
+    function changePlayerColor() {
+        let currentIndex = colors.indexOf(player.color);
+        player.color = colors[(currentIndex + 1) % colors.length];
+        colorChangeSound.play();
+    }
+
+    function updateGameArea() {
+        // Clear canvas, update player, obstacles, check collisions, draw everything
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // Update logic here
+        // Draw player, obstacles, update score
+        // Check for game over conditions
+        if (/* collision detected */) {
+            clearInterval(gameLoop);
+            collisionSound.play();
+            document.getElementById('restartButton').style.display = 'block';
+        }
+    }
+
+    // Event listeners
+    window.addEventListener('keydown', function(e) {
+        if (e.code === 'Space') changePlayerColor();
+    });
+    canvas.addEventListener('click', changePlayerColor);
+
+    // Initial setup for audio, etc., would go here
+</script>
+</body>
+</html>

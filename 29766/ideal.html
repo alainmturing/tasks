@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Color Switcher</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+            background: linear-gradient(to bottom right, #83a4d4, #b6fbff);
+        }
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            z-index: 10;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .button {
+            padding: 15px 30px;
+            margin: 10px;
+            background-color: #ff5722;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .button:hover {
+            background-color: #e64a19;
+        }
+        #distance {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            color: #fff;
+            text-shadow: 2px 2px 4px #000;
+            z-index: 5;
+        }
+        #distance {
+            top: 60px;
+            font-size: 36px;
+            font-weight: bold;
+        }
+        #instructions {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 300px;
+            z-index: 5;
+        }
+        #instructions h2 {
+            font-size: 20px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        #instructions p {
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+        #instructions ul {
+            padding-left: 20px;
+        }
+        #instructions li {
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="distance" class="hidden">0m</div>
+    <div id="instructions" class="hidden">
+        <h2>How to Play</h2>
+        <p>Switch colors to match the obstacles:</p>
+        <ul>
+            <li>Click or press Spacebar to change color</li>
+            <li>Match your color with the approaching obstacles</li>
+            <li>Avoid colliding with different colors</li>
+        </ul>
+        <p>Good luck!</p>
+    </div>
+    <div id="overlay">
+        <h1>Color Switcher</h1>
+        <button class="button" data-level="easy">Easy</button>
+        <button class="button" data-level="medium">Medium</button>
+        <button class="button" data-level="hard">Hard</button>
+    </div>
+
+    <script>
+        // Get DOM elements
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const overlay = document.getElementById('overlay');
+        const distanceElement = document.getElementById('distance');
+
+        // Set canvas size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Game Variables
+        let gameState = 'levelSelection'; // 'playing', 'gameOver'
+        let level = 'easy';
+        let colors = [];
+        let colorIndex = 0;
+        let character = {
+            x: 100,
+            y: canvas.height / 2,
+            radius: 20,
+            color: '',
+        };
+        let obstacles = [];
+        let obstacleInterval = 2000; // in ms
+        let lastObstacleTime = 0;
+        let obstacleSpeed = 2;
+        let distance = 0;
+        let lastFrameTime = 0;
+
+        // Sound Setup using Web Audio API
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(frequency, type, duration) {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.type = type;
+            oscillator.frequency.value = frequency;
+            oscillator.start();
+
+            gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+
+            oscillator.stop(audioCtx.currentTime + duration);
+        }
+
+        function playColorChangeSound() {
+            playSound(440, 'sine', 0.1);
+        }
+
+        function playCollisionSound() {
+            playSound(60, 'sawtooth', 0.3);
+        }
+
+        // Level Definitions
+        const levels = {
+            easy: {
+                colors: ['red', 'green', 'blue'],
+                speed: 2,
+                obstacleInterval: 2000,
+            },
+            medium: {
+                colors: ['red', 'green', 'blue', 'yellow'],
+                speed: 4,
+                obstacleInterval: 1500,
+            },
+            hard: {
+                colors: ['red', 'green', 'blue', 'yellow', 'purple'],
+                speed: 6,
+                obstacleInterval: 1000,
+            }
+        };
+
+        // Handle Level Selection
+        function handleLevelSelection(e) {
+            if (e.target.classList.contains('button') && e.target.hasAttribute('data-level')) {
+                level = e.target.getAttribute('data-level');
+                startGame();
+            }
+        }
+
+        overlay.addEventListener('click', handleLevelSelection);
+
+        // Start Game Function
+        function startGame() {
+            if (!level || !levels[level]) {
+                console.error('Invalid level:', level);
+                return;
+            }
+
+            gameState = 'playing';
+            overlay.classList.add('hidden');
+            distanceElement.classList.remove('hidden');
+            document.getElementById('instructions').classList.remove('hidden');
+
+            // Initialize level settings
+            colors = [...levels[level].colors];
+            obstacleSpeed = levels[level].speed;
+            obstacleInterval = levels[level].obstacleInterval;
+
+            // Initialize character
+            character.color = colors[colorIndex];
+
+            // Reset obstacles, and distance
+            obstacles = [];
+            distance = 0;
+            lastObstacleTime = performance.now();
+            lastFrameTime = performance.now();
+
+            // Start game loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Game Loop
+        function gameLoop(timestamp) {
+            if (gameState !== 'playing') return;
+
+            const deltaTime = timestamp - lastFrameTime;
+            lastFrameTime = timestamp;
+            distance += deltaTime * obstacleSpeed * 0.01; // Adjust distance calculation as needed
+
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Update and draw character
+            character.y = canvas.height / 2;
+            ctx.beginPath();
+            ctx.arc(character.x, character.y, character.radius, 0, Math.PI * 2);
+            ctx.fillStyle = character.color;
+            ctx.fill();
+            ctx.closePath();
+
+            // Update and draw obstacles
+            obstacles.forEach((obstacle, index) => {
+                obstacle.x -= obstacle.speed;
+                // Draw obstacle as a vertical bar with height covering the canvas height
+                ctx.fillStyle = obstacle.color;
+                ctx.fillRect(obstacle.x, 0, obstacle.width, canvas.height);
+
+                // Collision Detection
+                if (
+                    character.x + character.radius > obstacle.x &&
+                    character.x - character.radius < obstacle.x + obstacle.width
+                ) {
+                    // Character must match the obstacle's color
+                    if (character.color !== obstacle.color) {
+                        endGame();
+                    }
+                }
+
+                // Remove obstacles that have moved off screen
+                if (obstacle.x + obstacle.width < 0) {
+                    obstacles.splice(index, 1);
+                }
+            });
+
+            // Generate new obstacles
+            if (timestamp - lastObstacleTime > obstacleInterval) {
+                const obstacleWidth = 50;
+                const obstacleColor = colors[Math.floor(Math.random() * colors.length)];
+                obstacles.push({
+                    x: canvas.width,
+                    width: obstacleWidth,
+                    color: obstacleColor,
+                    speed: obstacleSpeed,
+                });
+                lastObstacleTime = timestamp;
+            }
+
+            // Update distance
+            distanceElement.textContent = Math.floor(distance) + 'm';
+
+            // Request next frame
+            requestAnimationFrame(gameLoop);
+        }
+
+        // End Game Function
+        function endGame() {
+            gameState = 'gameOver';
+            distanceElement.classList.add('hidden');
+            document.getElementById('instructions').classList.add('hidden');
+            overlay.innerHTML = `
+                <h1>Game Over</h1>
+                <p>Distance Travelled: ${Math.floor(distance)}m</p>
+                <button class="button" id="restart">Restart</button>
+                <button class="button" id="back">Level Selection</button>
+            `;
+            overlay.classList.remove('hidden');
+
+            // Remove previous event listeners
+            overlay.removeEventListener('click', handleLevelSelection);
+
+            // Add event listeners for new buttons
+            document.getElementById('restart').addEventListener('click', function() {
+                startGame(); // Directly restart the game with the current level
+            });
+
+            document.getElementById('back').addEventListener('click', function() {
+                resetGame();
+            });
+
+            playCollisionSound();
+        }
+
+        function resetGame() {
+            gameState = 'levelSelection';
+            level = null; // Reset the level
+            distance = 0;
+            obstacles = [];
+            setupInitialOverlay();
+            overlay.classList.remove('hidden');
+            distanceElement.classList.add('hidden');
+            document.getElementById('instructions').classList.add('hidden');
+        }
+
+
+        // Handle Controls
+        function cycleColor() {
+            colorIndex = (colorIndex + 1) % colors.length;
+            character.color = colors[colorIndex];
+            playColorChangeSound();
+        }
+
+        window.addEventListener('keydown', function(e) {
+            if (e.code === 'Space' && gameState === 'playing') {
+                e.preventDefault();
+                cycleColor();
+            }
+        });
+
+        window.addEventListener('click', function(e) {
+            if (gameState === 'playing') {
+                cycleColor();
+            }
+        });
+
+        // Initial Overlay Setup
+        function setupInitialOverlay() {
+            overlay.innerHTML = `
+                <h1>Color Switcher</h1>
+                <button class="button" data-level="easy">Easy</button>
+                <button class="button" data-level="medium">Medium</button>
+                <button class="button" data-level="hard">Hard</button>
+            `;
+            // Remove any existing event listeners before adding a new one
+            overlay.removeEventListener('click', handleLevelSelection);
+            overlay.addEventListener('click', handleLevelSelection);
+        }
+
+        // Initialize the game
+        resetGame();
+        setupInitialOverlay();
+    </script>
+</body>
+</html>

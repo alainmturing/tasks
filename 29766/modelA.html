@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Color Switcher</title>
+<style>
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background: linear-gradient(to right, #ff9a9e, #fad0c4);
+    font-family: 'Arial', sans-serif;
+}
+#gameArea {
+    position: relative;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid white;
+    border-radius: 10px;
+    overflow: hidden;
+}
+#instructions {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 10px;
+    border-radius: 5px;
+    color: #333;
+}
+#score {
+    position: absolute;
+    top: 10px;
+    width: 100%;
+    text-align: center;
+    color: white;
+    font-size: 24px;
+}
+button {
+    margin: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    background-color: #ff6b6b;
+    border: none;
+    color: white;
+    border-radius: 5px;
+}
+button:hover {
+    background-color: #ee5253;
+}
+</style>
+</head>
+<body>
+<div id="gameArea">
+    <div id="instructions">
+        <h3>Instructions:</h3>
+        <p>Change color with <strong>Spacebar</strong> or <strong>Click</strong>.</p>
+        <p>Match the color of the incoming obstacle to pass through.</p>
+    </div>
+    <div id="score">Score: 0</div>
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
+    <div>
+        <button onclick="startGame('easy')">Easy</button>
+        <button onclick="startGame('medium')">Medium</button>
+        <button onclick="startGame('hard')">Hard</button>
+        <button onclick="restartGame()" style="display:none;">Restart</button>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let gameLoop, player, obstacles = [], score = 0, currentLevel, gameState = 'levelSelect';
+
+// Sound setup
+function createSound(buffer) {
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    return source;
+}
+
+let changeColorSound, collisionSound;
+
+// Preload sounds
+Promise.all([
+    fetch('colorchange.mp3').then(response => response.arrayBuffer()).then(buffer => audioContext.decodeAudioData(buffer)),
+    fetch('collision.mp3').then(response => response.arrayBuffer()).then(buffer => audioContext.decodeAudioData(buffer))
+]).then(([colorBuffer, collisionBuffer]) => {
+    changeColorSound = createSound(colorBuffer);
+    collisionSound = createSound(collisionBuffer);
+});
+
+const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#9B59B6'];
+const levels = {
+    'easy': {colors: colors.slice(0, 3), speed: 1},
+    'medium': {colors: colors.slice(0, 4), speed: 1.5},
+    'hard': {colors: colors, speed: 2}
+};
+
+function startGame(level) {
+    currentLevel = levels[level];
+    player = {x: 50, y: canvas.height / 2, radius: 20, color: 0};
+    obstacles = [];
+    score = 0;
+    document.querySelector('button').style.display = 'none';
+    gameState = 'playing';
+    gameLoop = setInterval(updateGameArea, 20);
+}
+
+function restartGame() {
+    startGame(Object.keys(levels).find(key => levels[key] === currentLevel));
+}
+
+function updateGameArea() {
+    if (gameState !== 'playing') return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Update score
+    score += 0.1;
+    document.getElementById('score').textContent = `Score: ${Math.floor(score)}`;
+
+    // Player
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+    ctx.fillStyle = currentLevel.colors[player.color];
+    ctx.fill();
+
+    // Obstacles
+    if (Math.random() < 0.02) {
+        obstacles.push({
+            x: canvas.width,
+            width: 20,
+            height: canvas.height,
+            color: Math.floor(Math.random() * currentLevel.colors.length)
+        });
+    }
+
+    obstacles.forEach((obstacle, index) => {
+        obstacle.x -= currentLevel.speed;
+        ctx.fillStyle = currentLevel.colors[obstacle.color];
+        ctx.fillRect(obstacle.x, 0, obstacle.width, obstacle.height);
+
+        // Check collision
+        if (obstacle.x < player.x + player.radius && obstacle.x + obstacle.width > player.x - player.radius &&
+            obstacle.color !== player.color) {
+            gameOver();
+        }
+
+        if (obstacle.x + obstacle.width < 0) {
+            obstacles.splice(index, 1);
+        }
+    });
+}
+
+function gameOver() {
+    clearInterval(gameLoop);
+    collisionSound.start();
+    gameState = 'gameOver';
+    document.querySelector('button').style.display = 'inline';
+    document.querySelector('button').textContent = 'Restart';
+}
+
+function changeColor() {
+    if (gameState !== 'playing') return;
+    player.color = (player.color + 1) % currentLevel.colors.length;
+    changeColorSound.start();
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.code === 'Space') changeColor();
+});
+
+canvas.addEventListener('click', changeColor);
+</script>
+</body>
+</html>
