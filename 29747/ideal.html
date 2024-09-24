@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fruit Slicing Game</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+            cursor: none;
+            background: linear-gradient(to bottom, #87ceeb, #f0e68c);
+            position: relative;
+            font-family: Arial, sans-serif;
+        }
+        #level-selection, #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        #level-selection button, #game-over button {
+            padding: 15px 30px;
+            margin: 10px;
+            font-size: 20px;
+            cursor: pointer;
+            border: none;
+            border-radius: 10px;
+            background-color: #ff6347;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        #level-selection button:hover, #game-over button:hover {
+            background-color: #ff4500;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 24px;
+            color: white;
+            text-shadow: 2px 2px 4px #000;
+            z-index: 1000;
+        }
+        .fruit {
+            position: absolute;
+            font-size: 50px;
+            user-select: none;
+            pointer-events: none;
+        }
+        #knife {
+            position: absolute;
+            font-size: 40px;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 1001;
+        }
+    </style>
+</head>
+<body>
+    <div id="level-selection">
+        <h1>Fruit Slicing Game</h1>
+        <button data-level="easy">Easy</button>
+        <button data-level="medium">Medium</button>
+        <button data-level="hard">Hard</button>
+    </div>
+
+    <div id="score" style="display: none;">
+        Score: 0
+    </div>
+
+    <div id="game-over" style="display: none;">
+        <h1>Game Over!</h1>
+        <p>Your Score: <span id="final-score">0</span></p>
+        <button id="restart-button">Restart</button>
+    </div>
+
+    <div id="knife">🔪</div>
+
+    <script>
+        const levelSelection = document.getElementById('level-selection');
+        const gameOverScreen = document.getElementById('game-over');
+        const finalScore = document.getElementById('final-score');
+        const scoreDisplay = document.getElementById('score');
+        const knife = document.getElementById('knife');
+        const body = document.body;
+        const restartButton = document.getElementById('restart-button');
+
+        let currentLevel = 'easy';
+        let score = 0;
+        let fruitInterval;
+        let isGameOver = false;
+        let fruits = [];
+
+        const settings = {
+            easy: {
+                launchVelocityMin: 600,
+                launchVelocityMax: 800,
+                spawnRate: 1500,
+                fruitSize: '50px',
+                gravity: 400
+            },
+            medium: {
+                launchVelocityMin: 700,
+                launchVelocityMax: 900,
+                spawnRate: 1000,
+                fruitSize: '40px',
+                gravity: 600
+            },
+            hard: {
+                launchVelocityMin: 800,
+                launchVelocityMax: 1000,
+                spawnRate: 700,
+                fruitSize: '30px',
+                gravity: 800
+            }
+        };
+
+        const fruitEmojis = ['🍎', '🍌', '🍉', '🍇', '🍓', '🍒', '🍑', '🍍'];
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSliceSound() {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.type = 'sawtooth';
+            oscillator.frequency.setValueAtTime(1000, audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.1);
+        }
+
+        levelSelection.addEventListener('click', (e) => {
+            if(e.target.tagName === 'BUTTON') {
+                currentLevel = e.target.getAttribute('data-level');
+                startGame();
+            }
+        });
+
+        restartButton.addEventListener('click', resetGame);
+
+        function startGame() {
+            levelSelection.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            scoreDisplay.style.display = 'block';
+            score = 0;
+            updateScore();
+            isGameOver = false;
+            fruits = [];
+
+            fruitInterval = setInterval(spawnFruit, settings[currentLevel].spawnRate);
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resetGame() {
+            clearInterval(fruitInterval);
+            fruits.forEach(fruit => fruit.element.remove());
+            fruits = [];
+            score = 0;
+            isGameOver = false;
+            currentLevel = 'easy';
+            
+            gameOverScreen.style.display = 'none';
+            scoreDisplay.style.display = 'none';
+            levelSelection.style.display = 'block';
+        }
+
+        function updateScore() {
+            scoreDisplay.textContent = `Score: ${score}`;
+        }
+
+        function spawnFruit() {
+            if(isGameOver) return;
+
+            const fruitElement = document.createElement('div');
+            fruitElement.classList.add('fruit');
+            const fruitEmoji = fruitEmojis[Math.floor(Math.random() * fruitEmojis.length)];
+            fruitElement.textContent = fruitEmoji;
+            fruitElement.style.fontSize = settings[currentLevel].fruitSize;
+
+            const minX = window.innerWidth * 0.2;
+            const maxX = window.innerWidth * 0.8;
+            const x = Math.random() * (maxX - minX) + minX;
+            const y = window.innerHeight;
+
+            const minVelocity = settings[currentLevel].launchVelocityMin;
+            const maxVelocity = settings[currentLevel].launchVelocityMax;
+            const launchVelocity = Math.random() * (maxVelocity - minVelocity) + minVelocity;
+            
+            let minAngle, maxAngle;
+            if (currentLevel === 'easy') {
+                minAngle = Math.PI / 3;
+                maxAngle = Math.PI / 2;
+            } else if (currentLevel === 'medium') {
+                minAngle = Math.PI / 4;
+                maxAngle = Math.PI / 3;
+            } else {
+                minAngle = Math.PI / 6;
+                maxAngle = Math.PI / 4;
+            }
+            
+            const launchAngle = Math.random() * (maxAngle - minAngle) + minAngle;
+
+            const fruit = {
+                element: fruitElement,
+                x: x,
+                y: y,
+                vx: launchVelocity * Math.cos(launchAngle),
+                vy: -launchVelocity * Math.sin(launchAngle),
+                sliced: false
+            };
+
+            fruits.push(fruit);
+            body.appendChild(fruitElement);
+        }
+
+        function updateFruits(timestamp) {
+            const gravity = settings[currentLevel].gravity;
+            const deltaTime = 1 / 60;
+
+            fruits.forEach((fruit, index) => {
+                fruit.x += fruit.vx * deltaTime;
+                fruit.y += fruit.vy * deltaTime;
+                fruit.vy += gravity * deltaTime;
+
+                if (fruit.x < 0 || fruit.x > window.innerWidth) {
+                    fruit.vx = -fruit.vx * 0.8;
+                }
+
+                if (fruit.y > window.innerHeight + 100) {
+                    if (!fruit.sliced) {
+                        endGame();
+                    } else {
+                        fruit.element.remove();
+                        fruits.splice(index, 1);
+                    }
+                }
+            });
+        }
+
+        function gameLoop(timestamp) {
+            if (!isGameOver) {
+                updateFruits(timestamp);
+                checkCollisions();
+                renderFruits();
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function renderFruits() {
+            fruits.forEach(fruit => {
+                fruit.element.style.left = `${fruit.x}px`;
+                fruit.element.style.top = `${fruit.y}px`;
+            });
+        }
+
+        function checkCollisions() {
+            const knifeRect = knife.getBoundingClientRect();
+            
+            fruits.forEach((fruit, index) => {
+                if (!fruit.sliced) {
+                    const fruitRect = fruit.element.getBoundingClientRect();
+                    if (rectsIntersect(knifeRect, fruitRect)) {
+                        sliceFruit(fruit, index);
+                    }
+                }
+            });
+        }
+
+        function rectsIntersect(r1, r2) {
+            return !(r2.left > r1.right || 
+                     r2.right < r1.left || 
+                     r2.top > r1.bottom ||
+                     r2.bottom < r1.top);
+        }
+
+        function sliceFruit(fruit, index) {
+            fruit.sliced = true;
+            fruit.element.style.opacity = '0.5';
+            score += 10;
+            updateScore();
+            playSliceSound();
+        }
+
+        function endGame() {
+            isGameOver = true;
+            clearInterval(fruitInterval);
+            scoreDisplay.style.display = 'none';
+            finalScore.textContent = score;
+            gameOverScreen.style.display = 'block';
+        }
+
+        body.addEventListener('mousemove', (e) => {
+            knife.style.left = `${e.clientX}px`;
+            knife.style.top = `${e.clientY}px`;
+        });
+
+        window.addEventListener('resize', () => {
+            // Optional: Adjust positions or handle responsive elements
+        });
+
+        // Initialize the game
+        levelSelection.style.display = 'block';
+    </script>
+</body>
+</html>

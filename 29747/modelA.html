@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Fruit Slice Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: url('https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2') no-repeat center center fixed;
+            background-size: cover;
+            font-family: 'Arial', sans-serif;
+            color: white;
+            text-align: center;
+        }
+        #gameCanvas {
+            display: block;
+            background: rgba(0, 0, 0, 0.5);
+            margin: 0 auto;
+        }
+        #knife {
+            position: absolute;
+            font-size: 30px;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+        .levelButton {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #startScreen, #endScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+<div id="startScreen">
+    <h1>Fruit Slice Game</h1>
+    <button class="levelButton" onclick="startGame('easy')">Easy</button>
+    <button class="levelButton" onclick="startGame('medium')">Medium</button>
+    <button class="levelButton" onclick="startGame('hard')">Hard</button>
+</div>
+<div id="endScreen" style="display:none;">
+    <h2>Game Over!</h2>
+    <p>Your Score: <span id="scoreDisplay"></span></p>
+    <button onclick="location.reload()">Play Again</button>
+</div>
+<div id="gameCanvas"></div>
+<div id="knife">🔪</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx = canvas.getContext('2d');
+    const knife = document.getElementById('knife');
+    let gameRunning = false;
+    let fruits = [];
+    let score = 0;
+    let level = 'medium';
+
+    // Fruit properties based on difficulty
+    const difficulties = {
+        'easy': {speed: 1, size: 60, heightRange: [0.7, 0.9]},
+        'medium': {speed: 2, size: 40, heightRange: [0.5, 0.7]},
+        'hard': {speed: 3, size: 20, heightRange: [0.3, 0.5]}
+    };
+
+    // Audio for slicing
+    const sliceSound = new Audio('https://freesound.org/data/previews/109/109662_953071-lq.mp3');
+    sliceSound.volume = 0.3;
+
+    function startGame(difficulty) {
+        level = difficulty;
+        document.getElementById('startScreen').style.display = 'none';
+        gameRunning = true;
+        animate();
+        spawnFruit();
+    }
+
+    function spawnFruit() {
+        if (!gameRunning) return;
+        const fruit = {
+            x: Math.random() * canvas.width,
+            y: canvas.height,
+            size: difficulties[level].size,
+            speedY: -Math.random() * 5 * difficulties[level].speed,
+            angle: Math.random() * Math.PI * 2,
+            spin: Math.random() > 0.5 ? 0.05 : -0.05
+        };
+        fruits.push(fruit);
+        setTimeout(spawnFruit, Math.random() * 1000 + 500); // Random interval for next fruit
+    }
+
+    function animate() {
+        if (!gameRunning) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        fruits.forEach((fruit, index) => {
+            fruit.y += fruit.speedY;
+            fruit.speedY += 0.1; // Gravity effect
+            fruit.angle += fruit.spin;
+            ctx.save();
+            ctx.translate(fruit.x, fruit.y);
+            ctx.rotate(fruit.angle);
+            ctx.fillText('🍎', 0, 0); // Using an apple emoji for simplicity
+            ctx.restore();
+            
+            if (fruit.y > canvas.height) {
+                gameOver();
+            }
+        });
+        requestAnimationFrame(animate);
+    }
+
+    function gameOver() {
+        gameRunning = false;
+        document.getElementById('endScreen').style.display = 'block';
+        document.getElementById('scoreDisplay').textContent = score;
+    }
+
+    canvas.addEventListener('mousemove', function(e) {
+        knife.style.left = e.clientX + 'px';
+        knife.style.top = e.clientY + 'px';
+    });
+
+    canvas.addEventListener('click', function(e) {
+        fruits = fruits.filter(fruit => {
+            const dx = e.clientX - fruit.x;
+            const dy = e.clientY - fruit.y;
+            if (Math.sqrt(dx * dx + dy * dy) < difficulties[level].size) {
+                sliceSound.currentTime = 0;
+                sliceSound.play();
+                score++;
+                return false; // Remove fruit if sliced
+            }
+            return true; // Keep fruit if not sliced
+        });
+    });
+
+    // Reset game state when window is resized
+    window.onresize = () => {
+        if (gameRunning) {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+    };
+</script>
+</body>
+</html>

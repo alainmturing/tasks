@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fruit Ninja Clone</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: url('path/to/background.jpg') no-repeat center center fixed;
+    background-size: cover;
+    font-family: 'Arial', sans-serif;
+  }
+  #gameArea {
+    width: 100vw;
+    height: 100vh;
+    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50"><text y="35" font-size="30">🔪</text></svg>'), auto;
+  }
+  #levelSelect, #score {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  button {
+    margin: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  #score {
+    display: none;
+    font-size: 2em;
+    color: white;
+    text-shadow: 2px 2px 4px #000000;
+  }
+</style>
+</head>
+<body>
+<div id="gameArea">
+  <div id="levelSelect">
+    <button onclick="startGame('easy')">Easy</button>
+    <button onclick="startGame('medium')">Medium</button>
+    <button onclick="startGame('hard')">Hard</button>
+  </div>
+  <div id="score">Score: <span id="scoreValue">0</span></div>
+</div>
+
+<script>
+const gameArea = document.getElementById('gameArea');
+const levelSelect = document.getElementById('levelSelect');
+const scoreDisplay = document.getElementById('scoreValue');
+let score = 0;
+let gameInterval;
+let fruits = [];
+let level = 'medium'; // Default level
+const gravity = 0.0098; // Simplified gravity for game purposes
+
+// Audio
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+const sliceSoundBuffer = null; // Load this buffer with a slicing sound
+
+function loadSound(url) {
+  return fetch(url)
+    .then(response => response.arrayBuffer())
+    .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer));
+}
+
+loadSound('path/to/slice_sound.mp3').then(buffer => {
+  sliceSoundBuffer = buffer;
+});
+
+function playSound(buffer) {
+  const source = audioContext.createBufferSource();
+  source.buffer = buffer;
+  source.connect(audioContext.destination);
+  source.start(0);
+}
+
+function startGame(selectedLevel) {
+  level = selectedLevel;
+  levelSelect.style.display = 'none';
+  scoreDisplay.parentElement.style.display = 'block';
+  score = 0;
+  fruits = [];
+  updateScore();
+  gameInterval = setInterval(spawnFruit, 1000);
+}
+
+function spawnFruit() {
+  const fruit = document.createElement('div');
+  fruit.textContent = '🍎'; // Default fruit emoji, change based on level or randomly
+  fruit.style.position = 'absolute';
+  fruit.style.left = `${Math.random() * (gameArea.clientWidth - 50)}px`;
+  fruit.style.bottom = '0px';
+  fruit.style.fontSize = `${level === 'easy' ? 40 : level === 'hard' ? 20 : 30}px`;
+  
+  const angle = Math.PI * (0.25 + Math.random() * 0.5); // Random angle for variety
+  const velocity = level === 'easy' ? 10 : level === 'hard' ? 6 : 8; // Base velocity adjusted by level
+  const vX = velocity * Math.sin(angle);
+  const vY = -velocity * Math.cos(angle);
+  
+  let posY = 0;
+  let posX = parseFloat(fruit.style.left);
+
+  const moveFruit = () => {
+    posY += vY;
+    vY += gravity;
+    posX += vX;
+    
+    if (posY > gameArea.clientHeight) {
+      gameOver(fruit);
+      return;
+    }
+    
+    fruit.style.bottom = `${posY}px`;
+    fruit.style.left = `${posX}px`;
+    
+    requestAnimationFrame(moveFruit);
+  };
+
+  gameArea.appendChild(fruit);
+  fruits.push(fruit);
+  moveFruit();
+}
+
+function gameOver(fruit) {
+  clearInterval(gameInterval);
+  fruits.forEach(f => f.remove());
+  fruits = [];
+  alert('Game Over! Your score: ' + score);
+  levelSelect.style.display = 'block';
+  scoreDisplay.parentElement.style.display = 'none';
+}
+
+gameArea.addEventListener('click', (event) => {
+  const clickedFruit = fruits.find(fruit => {
+    const rect = fruit.getBoundingClientRect();
+    return event.clientX >= rect.left && event.clientX <= rect.right &&
+           event.clientY >= rect.top && event.clientY <= rect.bottom;
+  });
+
+  if (clickedFruit) {
+    playSound(sliceSoundBuffer);
+    score += 1;
+    updateScore();
+    clickedFruit.remove();
+    fruits.splice(fruits.indexOf(clickedFruit), 1);
+  }
+});
+
+function updateScore() {
+  scoreDisplay.textContent = score;
+}
+</script>
+</body>
+</html>
