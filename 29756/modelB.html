@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Target Tapping Game</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background: linear-gradient(to right, #d3d3d3, #a9a9a9);
+}
+
+#gameContainer {
+    text-align: center;
+    width: 100%;
+    max-width: 600px;
+    position: relative;
+}
+
+#gameArea {
+    border: 2px solid black;
+    height: 400px;
+    position: relative;
+    overflow: hidden;
+    background: white;
+}
+
+.target {
+    position: absolute;
+    cursor: pointer;
+}
+
+#score, #timer {
+    font-size: 24px;
+    margin: 10px 0;
+}
+
+button {
+    margin: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.level, #endScreen {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+</style>
+</head>
+<body>
+
+<div id="gameContainer">
+    <div id="levelSelect" class="level">
+        <h2>Choose Your Level</h2>
+        <button onclick="startGame('easy')">Easy</button>
+        <button onclick="startGame('medium')">Medium</button>
+        <button onclick="startGame('hard')">Hard</button>
+    </div>
+
+    <div id="gameScreen">
+        <div id="score">Score: 0</div>
+        <div id="timer">Time: 20</div>
+        <div id="gameArea"></div>
+    </div>
+
+    <div id="endScreen">
+        <h2>Game Over</h2>
+        <p>Your Score: <span id="finalScore"></span></p>
+        <button onclick="location.reload()">Play Again</button>
+        <button onclick="goToLevelSelect()">Change Level</button>
+    </div>
+</div>
+
+<script>
+const gameArea = document.getElementById('gameArea');
+const scoreDisplay = document.getElementById('score');
+const timerDisplay = document.getElementById('timer');
+const endScreen = document.getElementById('endScreen');
+const levelSelect = document.getElementById('levelSelect');
+const finalScoreDisplay = document.getElementById('finalScore');
+let score = 0, timeLeft = 20, gameInterval, targetInterval, currentLevel;
+
+// Audio setup
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+function playSound() {
+    const oscillator = audioContext.createOscillator();
+    oscillator.type = 'square';
+    oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+    oscillator.connect(audioContext.destination);
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.1);
+}
+
+function startGame(level) {
+    levelSelect.style.display = 'none';
+    currentLevel = level;
+    document.getElementById('gameScreen').style.display = 'block';
+    score = 0;
+    timeLeft = 20;
+    updateScore(0);
+    updateTimer();
+    gameInterval = setInterval(updateGame, 1000);
+    spawnTarget();
+}
+
+function spawnTarget() {
+    const target = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    target.setAttribute('width', '50');
+    target.setAttribute('height', '50');
+    target.classList.add('target');
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute('cx', '25');
+    circle.setAttribute('cy', '25');
+    circle.setAttribute('r', '25');
+    circle.setAttribute('fill', 'none');
+    circle.setAttribute('stroke', 'black');
+    circle.setAttribute('stroke-width', '2');
+    const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    dot.setAttribute('cx', '25');
+    dot.setAttribute('cy', '25');
+    dot.setAttribute('r', '3');
+    dot.setAttribute('fill', 'red');
+    target.appendChild(circle);
+    target.appendChild(dot);
+
+    const size = 50;
+    const maxX = gameArea.clientWidth - size;
+    const maxY = gameArea.clientHeight - size;
+    target.style.left = `${Math.floor(Math.random() * maxX)}px`;
+    target.style.top = `${Math.floor(Math.random() * maxY)}px`;
+
+    target.onclick = () => {
+        playSound();
+        gameArea.removeChild(target);
+        clearTimeout(targetTimeout);
+        updateScore(currentLevel === 'easy' ? 10 : currentLevel === 'medium' ? 20 : 30);
+        timeLeft += 1;
+        updateTimer('+1');
+        spawnTarget();
+    };
+
+    gameArea.appendChild(target);
+    let timeout = currentLevel === 'easy' ? 3500 : currentLevel === 'medium' ? 2500 : 1500;
+    let targetTimeout = setTimeout(() => {
+        gameArea.removeChild(target);
+        updateScore(-10);
+        spawnTarget();
+    }, timeout);
+
+    if (!targetInterval) {
+        targetInterval = setInterval(spawnTarget, 2000);
+    }
+}
+
+function updateGame() {
+    timeLeft -= 1;
+    if(timeLeft <= 0) {
+        endGame();
+    } else {
+        updateTimer();
+    }
+}
+
+function updateScore(points) {
+    score += points;
+    scoreDisplay.textContent = `Score: ${score}`;
+}
+
+function updateTimer(add = '') {
+    timerDisplay.textContent = `Time: ${timeLeft}${add}`;
+    if(add) {
+        const timerAnim = document.createElement('div');
+        timerAnim.textContent = add;
+        timerAnim.style.position = 'absolute';
+        timerAnim.style.left = '50%';
+        timerAnim.style.transform = 'translateX(-50%)';
+        timerAnim.style.fontSize = '20px';
+        timerAnim.style.animation = 'popUp 1s forwards';
+        gameArea.appendChild(timerAnim);
+        setTimeout(() => gameArea.removeChild(timerAnim), 1000);
+    }
+}
+
+function endGame() {
+    clearInterval(gameInterval);
+    clearInterval(targetInterval);
+    targetInterval = null;
+    gameArea.innerHTML = '';
+    finalScoreDisplay.textContent = score;
+    endScreen.style.display = 'block';
+}
+
+function goToLevelSelect() {
+    endScreen.style.display = 'none';
+    levelSelect.style.display = 'block';
+}
+</script>
+
+</body>
+</html>

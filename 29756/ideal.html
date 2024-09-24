@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Target Tapping Game</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #e0e0e0, #a0a0a0);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #container {
+            width: 95vw;
+            height: 95vh;
+            position: relative;
+            overflow: hidden;
+        }
+        .screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .active {
+            display: flex;
+        }
+        button {
+            padding: 15px 30px;
+            margin: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        #gameArea {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+            margin: 20px;
+        }
+        .target {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .target:hover {
+            transform: scale(1.05);
+        }
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+        #scoreTimer {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        #finalScore {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .pulse {
+            animation: pulse 0.3s ease-in-out;
+        }
+
+        #timeIncrement {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 18px;
+            font-weight: bold;
+            color: #4CAF50;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #timeIncrement.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <!-- Level Selection Screen -->
+        <div id="levelSelection" class="screen active">
+            <h1>Select Level</h1>
+            <button data-level="easy">Easy</button>
+            <button data-level="medium">Medium</button>
+            <button data-level="hard">Hard</button>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="gameScreen" class="screen">
+            <div id="scoreTimer">
+                <span id="score">Score: 0</span>
+                <span id="timer">Time: 20</span>
+            </div>
+            <div id="timeIncrement">+1s</div>
+            <div id="gameArea"></div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOver" class="screen">
+            <h1>Game Over</h1>
+            <p id="finalScore">Your Score: 0</p>
+            <button id="restart">Restart</button>
+            <button id="backToLevels">Back to Levels</button>
+        </div>
+    </div>
+    <script>
+        const levelSelection = document.getElementById('levelSelection');
+        const gameScreen = document.getElementById('gameScreen');
+        const gameOverScreen = document.getElementById('gameOver');
+        const gameArea = document.getElementById('gameArea');
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const finalScore = document.getElementById('finalScore');
+        const restartButton = document.getElementById('restart');
+        const backToLevelsButton = document.getElementById('backToLevels');
+
+        let gameSettings = {
+            level: 'easy',
+            targetDuration: 3500,
+            spawnInterval: 2000,
+            pointsPerHit: 10
+        };
+
+        let gameState = {
+            score: 0,
+            timeLeft: 20,
+            spawnTimer: null,
+            countdownTimer: null,
+            activeTargets: []
+        };
+
+        // Initialize Web Audio API
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playTapSound() {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(600, audioCtx.currentTime); // Frequency in Hz
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.start();
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.1);
+            oscillator.stop(audioCtx.currentTime + 0.1);
+        }
+
+        // Level Selection
+        levelSelection.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                const level = e.target.getAttribute('data-level');
+                setGameSettings(level);
+                startGame();
+            }
+        });
+
+        function setGameSettings(level) {
+            gameSettings.level = level;
+            switch(level) {
+                case 'easy':
+                    gameSettings.targetDuration = 3500;
+                    gameSettings.pointsPerHit = 10;
+                    break;
+                case 'medium':
+                    gameSettings.targetDuration = 2500;
+                    gameSettings.pointsPerHit = 20;
+                    break;
+                case 'hard':
+                    gameSettings.targetDuration = 1500;
+                    gameSettings.pointsPerHit = 30;
+                    break;
+            }
+        }
+
+        // Start Game
+        function startGame() {
+            levelSelection.classList.remove('active');
+            gameOverScreen.classList.remove('active');
+            gameScreen.classList.add('active');
+
+            // Reset Game State
+            gameState.score = 0;
+            gameState.timeLeft = 20;
+            updateScore();
+            updateTimer();
+
+            // Start Timers
+            gameState.spawnTimer = setInterval(spawnTarget, gameSettings.spawnInterval);
+            gameState.countdownTimer = setInterval(() => {
+                gameState.timeLeft--;
+                updateTimer();
+                if (gameState.timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        // Update Score Display
+        function updateScore() {
+            scoreDisplay.textContent = `Score: ${gameState.score}`;
+        }
+
+        // Update Timer Display
+        function updateTimer() {
+            timerDisplay.textContent = `Time: ${gameState.timeLeft}`;
+        }
+
+        // Spawn Target
+        function spawnTarget() {
+            const target = document.createElement('div');
+            target.classList.add('target');
+
+            // Create SVG with blue outline
+            target.innerHTML = `
+                <svg viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" stroke="#1E90FF" stroke-width="5" fill="none" />
+                    <circle cx="50" cy="50" r="10" fill="red" />
+                </svg>
+            `;
+
+            // Random Position
+            const size = 60;
+            const maxX = gameArea.clientWidth - size;
+            const maxY = gameArea.clientHeight - size;
+            const x = Math.random() * maxX;
+            const y = Math.random() * maxY;
+            target.style.left = `${x}px`;
+            target.style.top = `${y}px`;
+
+            // Add to Game Area
+            gameArea.appendChild(target);
+            gameState.activeTargets.push(target);
+
+            // Click Event
+            target.addEventListener('click', () => {
+                hitTarget(target);
+            });
+
+            // Remove after duration
+            const timeout = setTimeout(() => {
+                missTarget(target);
+            }, gameSettings.targetDuration);
+            target.timeout = timeout;
+        }
+
+        // Hit Target
+        function hitTarget(target) {
+            clearTimeout(target.timeout);
+            gameArea.removeChild(target);
+            gameState.activeTargets = gameState.activeTargets.filter(t => t !== target);
+            gameState.score += gameSettings.pointsPerHit;
+            updateScore();
+            playTapSound();
+        }
+
+        // Miss Target
+        function missTarget(target) {
+            gameArea.removeChild(target);
+            gameState.activeTargets = gameState.activeTargets.filter(t => t !== target);
+            gameState.score -= 10;
+            updateScore();
+            if (gameState.score < 0) {
+                endGame();
+            }
+        }
+
+        // End Game
+        function endGame() {
+            clearInterval(gameState.spawnTimer);
+            clearInterval(gameState.countdownTimer);
+            // Remove all active targets
+            gameState.activeTargets.forEach(target => {
+                clearTimeout(target.timeout);
+                if (target.parentElement) {
+                    gameArea.removeChild(target);
+                }
+            });
+            gameState.activeTargets = [];
+
+            // Show Game Over Screen
+            finalScore.textContent = `Your Score: ${gameState.score}`;
+            gameScreen.classList.remove('active');
+            gameOverScreen.classList.add('active');
+        }
+
+        // Restart Game
+        restartButton.addEventListener('click', () => {
+            startGame();
+        });
+
+        // Back to Level Selection
+        backToLevelsButton.addEventListener('click', () => {
+            gameOverScreen.classList.remove('active');
+            levelSelection.classList.add('active');
+        });
+
+        const timeIncrementDisplay = document.getElementById('timeIncrement');
+
+        // Update Timer Display
+        function updateTimer() {
+            timerDisplay.textContent = `Time: ${gameState.timeLeft}`;
+        }
+
+        // Hit Target
+        function hitTarget(target) {
+            clearTimeout(target.timeout);
+            gameArea.removeChild(target);
+            gameState.activeTargets = gameState.activeTargets.filter(t => t !== target);
+            gameState.score += gameSettings.pointsPerHit;
+            updateScore();
+            incrementTime();
+            playTapSound();
+        }
+
+        // Increment Time
+        function incrementTime() {
+            gameState.timeLeft += 1;
+            updateTimer();
+            
+            // Visual feedback for time increment
+            timerDisplay.classList.add('pulse');
+            setTimeout(() => timerDisplay.classList.remove('pulse'), 300);
+
+            timeIncrementDisplay.classList.add('show');
+            setTimeout(() => timeIncrementDisplay.classList.remove('show'), 1000);
+        }
+    </script>
+</body>
+</html>
