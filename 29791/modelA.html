@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Semiconductor Manufacturing Visualization</title>
+<style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #f4f4f4; }
+    #app { display: flex; height: 100vh; }
+    #sidebar { width: 250px; background: #333; color: white; overflow-y: auto; }
+    #main-content { flex-grow: 1; display: flex; flex-direction: column; }
+    #model-viewer { flex-grow: 1; background: #000; }
+    #description, #quiz { padding: 10px; background: white; }
+    .stage { padding: 10px; cursor: pointer; }
+    .stage:hover { background: #555; }
+    .quiz-toggle { margin: 10px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="app">
+    <div id="sidebar">
+        <h3>Manufacturing Stages</h3>
+        <!-- Stages will be populated here -->
+    </div>
+    <div id="main-content">
+        <div id="model-viewer"></div>
+        <div id="description"></div>
+        <div id="quiz" style="display:none;">
+            <h4>Quiz</h4>
+            <!-- Quiz content will be dynamically added here -->
+            <button class="quiz-toggle">Toggle Quiz</button>
+        </div>
+    </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({antialias: true});
+    renderer.setSize(window.innerWidth - 250, window.innerHeight);
+    document.getElementById('model-viewer').appendChild(renderer.domElement);
+
+    const stages = [
+        {name: 'Silicon Purification', model: createSphere()},
+        {name: 'Crystal Growth', model: createCylinder()},
+        {name: 'Wafer Slicing', model: createThinCylinder()},
+        // More stages would be added here
+    ];
+
+    let currentStage = 0;
+    
+    function createSphere() {
+        const geometry = new THREE.SphereGeometry(5, 32, 32);
+        const material = new THREE.MeshBasicMaterial({color: 0x00ff00});
+        return new THREE.Mesh(geometry, material);
+    }
+
+    function createCylinder() {
+        const geometry = new THREE.CylinderGeometry(5, 5, 20, 32);
+        const material = new THREE.MeshBasicMaterial({color: 0xff0000});
+        return new THREE.Mesh(geometry, material);
+    }
+
+    function createThinCylinder() {
+        const geometry = new THREE.CylinderGeometry(5, 5, 1, 32);
+        const material = new THREE.MeshBasicMaterial({color: 0x0000ff});
+        return new THREE.Mesh(geometry, material);
+    }
+
+    function loadStage(index) {
+        scene.remove(scene.children[0]);
+        const stage = stages[index];
+        scene.add(stage.model);
+        document.getElementById('description').innerText = `Stage ${index + 1}: ${stage.name}`;
+        currentStage = index;
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        if(stages[currentStage].model) {
+            stages[currentStage].model.rotation.y += 0.01;
+        }
+        renderer.render(scene, camera);
+    }
+
+    function setupSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        stages.forEach((stage, index) => {
+            const div = document.createElement('div');
+            div.className = 'stage';
+            div.textContent = stage.name;
+            div.onclick = () => loadStage(index);
+            sidebar.appendChild(div);
+        });
+    }
+
+    function setupQuiz() {
+        const quizDiv = document.getElementById('quiz');
+        const quizToggle = document.querySelector('.quiz-toggle');
+        quizToggle.onclick = () => {
+            quizDiv.style.display = quizDiv.style.display === 'none' ? 'block' : 'none';
+        };
+        // Here you would dynamically add quiz questions
+    }
+
+    camera.position.z = 20;
+    setupSidebar();
+    setupQuiz();
+    loadStage(0);
+    animate();
+</script>
+</body>
+</html>

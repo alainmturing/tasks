@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Advanced Semiconductor Manufacturing Visualization</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; background-color: #f0f0f0; }
+        #canvas-container { width: 100%; height: 100vh; }
+        #ui { position: absolute; top: 20px; left: 20px; color: #333; max-width: 300px; background: rgba(255,255,255,0.9); padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        #ui h1 { margin-top: 0; font-size: 24px; color: #2c3e50; }
+        #quiz-container { position: absolute; bottom: 20px; left: 20px; background: rgba(255,255,255,0.9); padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); display: none; }
+        #quiz-container h2 { margin-top: 0; color: #2c3e50; }
+        #quiz-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        #quiz-options button { padding: 10px; border: none; border-radius: 5px; background: #3498db; color: #fff; cursor: pointer; transition: background 0.3s; }
+        #quiz-options button:hover { background: #2980b9; }
+        #navigation { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; }
+        #navigation button, #toggle-quiz { padding: 10px 20px; border: none; border-radius: 5px; background: #2ecc71; color: #fff; cursor: pointer; transition: background 0.3s; }
+        #navigation button:hover, #toggle-quiz:hover { background: #27ae60; }
+        #navigation button:disabled { background: #95a5a6; cursor: not-allowed; }
+        #zoom-controls { position: absolute; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; }
+        #zoom-controls button { padding: 10px; border: none; border-radius: 5px; background: #e74c3c; color: #fff; cursor: pointer; transition: background 0.3s; }
+        #zoom-controls button:hover { background: #c0392b; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div id="ui">
+        <h1 id="stage-title">Semiconductor Manufacturing Process</h1>
+        <p id="stage-description">Click 'Next' to start the walkthrough.</p>
+    </div>
+    <div id="quiz-container">
+        <h2>Quiz Time!</h2>
+        <p id="quiz-question">Question will appear here.</p>
+        <div id="quiz-options"></div>
+    </div>
+    <div id="navigation">
+        <button id="prev-stage" disabled>Previous</button>
+        <button id="next-stage">Next</button>
+        <button id="toggle-quiz">Toggle Quiz</button>
+    </div>
+    <div id="zoom-controls">
+        <button id="zoom-in">+</button>
+        <button id="zoom-out">-</button>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+
+    <script>
+        let scene, camera, renderer, controls;
+        let currentStage = 0;
+        const stages = [
+            { 
+                name: 'Raw Silicon', 
+                description: 'Silicon is the fundamental material used in semiconductor manufacturing. It is derived from sand and purified to create silicon ingots.', 
+                buildModel: buildSiliconIngot 
+            },
+            { 
+                name: 'Wafer Creation', 
+                description: 'Silicon ingots are sliced into thin wafers, which serve as the substrate for microchips.', 
+                buildModel: buildSiliconWafer 
+            },
+            { 
+                name: 'Photolithography', 
+                description: 'A photoresist is applied to the wafer, and patterns are created using ultraviolet light through photomasks.', 
+                buildModel: buildPhotolithographyProcess 
+            },
+            { 
+                name: 'Etching', 
+                description: 'Unprotected areas of the wafer are etched away using chemical or plasma processes to create circuit patterns.', 
+                buildModel: buildEtchingProcess 
+            },
+            { 
+                name: 'Doping (Ion Implantation)', 
+                description: 'Impurities are introduced into specific areas to modify electrical properties.', 
+                buildModel: buildDopingProcess 
+            },
+            { 
+                name: 'Metal Deposition', 
+                description: 'Conductive materials are deposited to form interconnections between transistors.', 
+                buildModel: buildMetalDeposition 
+            },
+            { 
+                name: 'Packaging and Testing', 
+                description: 'Finished chips are packaged and tested for functionality before shipment.', 
+                buildModel: buildPackaging 
+            }
+        ];
+
+        init();
+        loadStage(currentStage);
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 3, 7);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            const ambientLight = new THREE.AmbientLight(0x404040, 2);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 10, 7);
+            scene.add(directionalLight);
+
+            window.addEventListener('resize', onWindowResize, false);
+            document.getElementById('next-stage').addEventListener('click', nextStage);
+            document.getElementById('prev-stage').addEventListener('click', prevStage);
+            document.getElementById('toggle-quiz').addEventListener('click', toggleQuiz);
+            document.getElementById('zoom-in').addEventListener('click', zoomIn);
+            document.getElementById('zoom-out').addEventListener('click', zoomOut);
+
+            animate();
+        }
+
+        function loadStage(index) {
+            document.getElementById('prev-stage').disabled = index === 0;
+            document.getElementById('next-stage').disabled = index === stages.length - 1;
+
+            while(scene.children.length > 0){ 
+                scene.remove(scene.children[0]); 
+            }
+            const ambientLight = new THREE.AmbientLight(0x404040, 2);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 10, 7);
+            scene.add(directionalLight);
+
+            const stage = stages[index];
+            document.getElementById('stage-title').innerText = stage.name;
+            document.getElementById('stage-description').innerText = stage.description;
+
+            stage.buildModel();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            TWEEN.update();
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function nextStage() {
+            if (currentStage < stages.length - 1) {
+                currentStage++;
+                loadStage(currentStage);
+            }
+        }
+
+        function prevStage() {
+            if (currentStage > 0) {
+                currentStage--;
+                loadStage(currentStage);
+            }
+        }
+
+        function toggleQuiz() {
+            const quizContainer = document.getElementById('quiz-container');
+            if (quizContainer.style.display === 'none' || quizContainer.style.display === '') {
+                quizContainer.style.display = 'block';
+                loadQuizQuestion();
+            } else {
+                quizContainer.style.display = 'none';
+            }
+        }
+
+        function loadQuizQuestion() {
+            const questions = [
+                { 
+                    question: 'What is the primary material used in semiconductor manufacturing?',
+                    options: ['Silicon', 'Copper', 'Gold', 'Aluminum'],
+                    answer: 'Silicon'
+                },
+                { 
+                    question: 'Which process involves patterning using ultraviolet light?',
+                    options: ['Etching', 'Doping', 'Photolithography', 'Metal Deposition'],
+                    answer: 'Photolithography'
+                },
+                { 
+                    question: 'What is the purpose of doping in semiconductor fabrication?',
+                    options: ['Clean the wafer', 'Modify electrical properties', 'Create patterns', 'Polish the surface'],
+                    answer: 'Modify electrical properties'
+                },
+                { 
+                    question: 'What process adds conductive materials to form interconnections?',
+                    options: ['Etching', 'Wafer Creation', 'Photolithography', 'Metal Deposition'],
+                    answer: 'Metal Deposition'
+                },
+                { 
+                    question: 'What stage involves slicing silicon ingots into thin wafers?',
+                    options: ['Raw Silicon', 'Wafer Creation', 'Etching', 'Packaging'],
+                    answer: 'Wafer Creation'
+                },
+            ];
+            const randomIndex = Math.floor(Math.random() * questions.length);
+            const currentQuestion = questions[randomIndex];
+            document.getElementById('quiz-question').innerText = currentQuestion.question;
+            
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+            currentQuestion.options.forEach(option => {
+                const button = document.createElement('button');
+                button.innerText = option;
+                button.addEventListener('click', () => checkAnswer(option, currentQuestion.answer));
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function checkAnswer(userAnswer, correctAnswer) {
+            if (userAnswer === correctAnswer) {
+                alert('Correct!');
+            } else {
+                alert(`Incorrect. The correct answer is: ${correctAnswer}`);
+            }
+            toggleQuiz();
+        }
+
+        function zoomIn() {
+            new TWEEN.Tween(camera.position).to({x: camera.position.x * 0.8, y: camera.position.y * 0.8, z: camera.position.z * 0.8}, 500).easing(TWEEN.Easing.Quadratic.Out).start();
+        }
+
+        function zoomOut() {
+            new TWEEN.Tween(camera.position).to({x: camera.position.x * 1.2, y: camera.position.y * 1.2, z: camera.position.z * 1.2}, 500).easing(TWEEN.Easing.Quadratic.Out).start();
+        }
+
+        function buildSiliconIngot() {
+            const geometry = new THREE.CylinderGeometry(1, 1, 5, 32);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0xaaaaaa,
+                metalness: 0.7,
+                roughness: 0.2
+            });
+            const ingot = new THREE.Mesh(geometry, material);
+            ingot.rotation.x = Math.PI / 2;
+            scene.add(ingot);
+
+            // Add texture to simulate crystal structure
+            const textureLoader = new THREE.TextureLoader();
+            const texture = textureLoader.load('https://threejsfundamentals.org/threejs/resources/images/crystal-structure.jpg');
+            material.map = texture;
+            material.bumpMap = texture;
+            material.bumpScale = 0.05;
+
+            // Add reflections
+            const envMapLoader = new THREE.CubeTextureLoader();
+            const envMap = envMapLoader.load([
+                'https://threejsfundamentals.org/threejs/resources/images/cubemaps/computer-history-museum/pos-x.jpg',
+                'https://threejsfundamentals.org/threejs/resources/images/cubemaps/computer-history-museum/neg-x.jpg',
+                'https://threejsfundamentals.org/threejs/resources/images/cubemaps/computer-history-museum/pos-y.jpg',
+                'https://threejsfundamentals.org/threejs/resources/images/cubemaps/computer-history-museum/neg-y.jpg',
+                'https://threejsfundamentals.org/threejs/resources/images/cubemaps/computer-history-museum/pos-z.jpg',
+                'https://threejsfundamentals.org/threejs/resources/images/cubemaps/computer-history-museum/neg-z.jpg',
+            ]);
+            material.envMap = envMap;
+        }
+
+        function buildSiliconWafer() {
+            const geometry = new THREE.CylinderGeometry(2, 2, 0.05, 64);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0x888888,
+                metalness: 0.7,
+                roughness: 0.3
+            });
+            const wafer = new THREE.Mesh(geometry, material);
+            scene.add(wafer);
+
+            // Add circular patterns to simulate circuits
+            const circuitGeometry = new THREE.RingGeometry(0.2, 1.9, 64);
+            const circuitMaterial = new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide });
+            const circuit = new THREE.Mesh(circuitGeometry, circuitMaterial);
+            circuit.rotation.x = Math.PI / 2;
+            circuit.position.y = 0.026;
+            scene.add(circuit);
+
+            // Add more detailed circuit patterns
+            const detailGeometry = new THREE.PlaneGeometry(3.8, 3.8);
+            const detailMaterial = new THREE.MeshBasicMaterial({
+                map: createCircuitTexture(),
+                transparent: true,
+                opacity: 0.8
+            });
+            const detail = new THREE.Mesh(detailGeometry, detailMaterial);
+            detail.rotation.x = -Math.PI / 2;
+            detail.position.y = 0.026;
+            scene.add(detail);
+        }
+
+        function createCircuitTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, 512, 512);
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 1;
+
+            // Create a more complex circuit pattern
+            for (let i = 0; i < 16; i++) {
+                for (let j = 0; j < 16; j++) {
+                    const x = i * 32;
+                    const y = j * 32;
+                    ctx.strokeRect(x + 4, y + 4, 24, 24);
+                    if (Math.random() > 0.5) {
+                        ctx.beginPath();
+                        ctx.moveTo(x + 16, y + 4);
+                        ctx.lineTo(x + 16, y + 28);
+                        ctx.stroke();
+                    } else {
+                        ctx.beginPath();
+                        ctx.moveTo(x + 4, y + 16);
+                        ctx.lineTo(x + 28, y + 16);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            const texture = new THREE.CanvasTexture(canvas);
+            return texture;
+        }
+
+        function buildPhotolithographyProcess() {
+            // Wafer
+            const waferGeometry = new THREE.CylinderGeometry(2, 2, 0.05, 64);
+            const waferMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.7, roughness: 0.3 });
+            const wafer = new THREE.Mesh(waferGeometry, waferMaterial);
+            scene.add(wafer);
+
+            // Photoresist layer
+            const resistGeometry = new THREE.CylinderGeometry(2, 2, 0.02, 64);
+            const resistMaterial = new THREE.MeshPhongMaterial({ color: 0xffcc00, transparent: true, opacity: 0.7 });
+            const resist = new THREE.Mesh(resistGeometry, resistMaterial);
+            resist.position.y = 0.035;
+            scene.add(resist);
+
+            // UV light representation
+            const lightGeometry = new THREE.ConeGeometry(2.5, 4, 32);
+            const lightMaterial = new THREE.MeshBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.3 });
+            const uvLight = new THREE.Mesh(lightGeometry, lightMaterial);
+            uvLight.position.y = 3.5;
+            uvLight.rotation.x = Math.PI;
+            scene.add(uvLight);
+
+            // Photomask
+            const maskGeometry = new THREE.BoxGeometry(4, 0.1, 4);
+            const maskMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
+            const mask = new THREE.Mesh(maskGeometry, maskMaterial);
+            mask.position.y = 2;
+            scene.add(mask);
+
+            // Photomask pattern
+            const patternGeometry = new THREE.PlaneGeometry(3.8, 3.8);
+            const patternMaterial = new THREE.MeshBasicMaterial({ 
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.5,
+                side: THREE.DoubleSide,
+                map: createCircuitTexture()
+            });
+            const pattern = new THREE.Mesh(patternGeometry, patternMaterial);
+            pattern.rotation.x = Math.PI / 2;
+            pattern.position.y = 1.95;
+            scene.add(pattern);
+
+            // Animate UV light
+            new TWEEN.Tween(uvLight.material)
+                .to({ opacity: 0.1 }, 1000)
+                .repeat(Infinity)
+                .yoyo(true)
+                .start();
+        }
+
+        function buildEtchingProcess() {
+            // Wafer with pattern
+            const waferGeometry = new THREE.CylinderGeometry(2, 2, 0.05, 64);
+            const waferMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.7, roughness: 0.3 });
+            const wafer = new THREE.Mesh(waferGeometry, waferMaterial);
+            scene.add(wafer);
+
+            // Etched pattern
+            const patternGeometry = new THREE.PlaneGeometry(3.8, 3.8);
+            const patternMaterial = new THREE.MeshBasicMaterial({
+                map: createCircuitTexture(),
+                transparent: true,
+                opacity: 0.8
+            });
+            const pattern = new THREE.Mesh(patternGeometry, patternMaterial);
+            pattern.rotation.x = -Math.PI / 2;
+            pattern.position.y = 0.026;
+            scene.add(pattern);
+
+            // Etching chamber representation
+            const chamberGeometry = new THREE.BoxGeometry(5, 5, 5);
+            const chamberMaterial = new THREE.MeshPhongMaterial({ color: 0x555555, transparent: true, opacity: 0.3 });
+            const chamber = new THREE.Mesh(chamberGeometry, chamberMaterial);
+            chamber.position.y = 2.5;
+            scene.add(chamber);
+
+            // Plasma representation
+            const plasmaGeometry = new THREE.SphereGeometry(2.2, 32, 32);
+            const plasmaMaterial = new THREE.MeshBasicMaterial({ color: 0xff00ff, transparent: true, opacity: 0.3 });
+            const plasma = new THREE.Mesh(plasmaGeometry, plasmaMaterial);
+            plasma.position.y = 2.5;
+            scene.add(plasma);
+
+            // Animate plasma
+            new TWEEN.Tween(plasma.scale)
+                .to({ x: 1.1, y: 1.1, z: 1.1 }, 1000)
+                .repeat(Infinity)
+                .yoyo(true)
+                .start();
+        }
+
+        function buildDopingProcess() {
+            // Wafer
+            const waferGeometry = new THREE.CylinderGeometry(2, 2, 0.05, 64);
+            const waferMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.7, roughness: 0.3 });
+            const wafer = new THREE.Mesh(waferGeometry, waferMaterial);
+            scene.add(wafer);
+
+            // Ion implanter representation
+            const implanterGeometry = new THREE.CylinderGeometry(0.5, 0.5, 3, 32);
+            const implanterMaterial = new THREE.MeshPhongMaterial({ color: 0x444444 });
+            const implanter = new THREE.Mesh(implanterGeometry, implanterMaterial);
+            implanter.position.set(0, 2.5, -2.5);
+            implanter.rotation.x = Math.PI / 4;
+            scene.add(implanter);
+
+            // Ion beam representation
+            const beamGeometry = new THREE.CylinderGeometry(0.1, 0.1, 4, 32);
+            const beamMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5 });
+            const beam = new THREE.Mesh(beamGeometry, beamMaterial);
+            beam.position.set(0, 2, -1.5);
+            beam.rotation.x = Math.PI / 4;
+            scene.add(beam);
+
+            // Dopant particles
+            const particleGeometry = new THREE.SphereGeometry(0.03, 8, 8);
+            const particleMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+            const particlesGroup = new THREE.Group();
+            for (let i = 0; i < 100; i++) {
+                const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                const theta = Math.random() * Math.PI * 2;
+                const radius = Math.random() * 2;
+                particle.position.set(
+                    radius * Math.cos(theta),
+                    0.025 + Math.random() * 4,
+                    radius * Math.sin(theta)
+                );
+                particlesGroup.add(particle);
+            }
+            scene.add(particlesGroup);
+
+            // Animate particles
+            new TWEEN.Tween(particlesGroup.rotation)
+                .to({ y: Math.PI * 2 }, 5000)
+                .repeat(Infinity)
+                .start();
+        }
+
+        function buildMetalDeposition() {
+            // Wafer
+            const waferGeometry = new THREE.CylinderGeometry(2, 2, 0.05, 64);
+            const waferMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 0.7, roughness: 0.3 });
+            const wafer = new THREE.Mesh(waferGeometry, waferMaterial);
+            scene.add(wafer);
+
+            // Metal layer
+            const metalGeometry = new THREE.CylinderGeometry(2, 2, 0.02, 64);
+            const metalMaterial = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.8, roughness: 0.2 });
+            const metalLayer = new THREE.Mesh(metalGeometry, metalMaterial);
+            metalLayer.position.y = 0.035;
+            scene.add(metalLayer);
+
+            // Sputtering target
+            const targetGeometry = new THREE.CylinderGeometry(0.7, 0.7, 0.2, 32);
+            const targetMaterial = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.8, roughness: 0.2 });
+            const target = new THREE.Mesh(targetGeometry, targetMaterial);
+            target.position.y = 3;
+            scene.add(target);
+
+            // Metal particles
+            const particleGeometry = new THREE.SphereGeometry(0.02, 8, 8);
+            const particleMaterial = new THREE.MeshBasicMaterial({ color: 0xffd700 });
+            const particlesGroup = new THREE.Group();
+            for (let i = 0; i < 200; i++) {
+                const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                const theta = Math.random() * Math.PI * 2;
+                const radius = Math.random() * 2;
+                const height = Math.random() * 3;
+                particle.position.set(
+                    radius * Math.cos(theta),
+                    height,
+                    radius * Math.sin(theta)
+                );
+                particlesGroup.add(particle);
+            }
+            scene.add(particlesGroup);
+
+            // Animate particles
+            new TWEEN.Tween(particlesGroup.rotation)
+                .to({ y: Math.PI * 2 }, 5000)
+                .repeat(Infinity)
+                .start();
+        }
+
+        function buildPackaging() {
+            // Chip
+            const chipGeometry = new THREE.BoxGeometry(1.5, 0.2, 1.5);
+            const chipMaterial = new THREE.MeshPhongMaterial({ color: 0x000000 });
+            const chip = new THREE.Mesh(chipGeometry, chipMaterial);
+            scene.add(chip);
+
+            // Package
+            const packageGeometry = new THREE.BoxGeometry(2, 0.4, 2);
+            const packageMaterial = new THREE.MeshPhongMaterial({ color: 0x333333 });
+            const package = new THREE.Mesh(packageGeometry, packageMaterial);
+            package.position.y = -0.1;
+            scene.add(package);
+
+            // Pins
+            const pinGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.3, 8);
+            const pinMaterial = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.8, roughness: 0.2 });
+            for (let x = -0.8; x <= 0.8; x += 0.2) {
+                for (let z = -0.8; z <= 0.8; z += 0.2) {
+                    if (Math.abs(x) === 0.8 || Math.abs(z) === 0.8) {
+                        const pin = new THREE.Mesh(pinGeometry, pinMaterial);
+                        pin.position.set(x, -0.35, z);
+                        scene.add(pin);
+                    }
+                }
+            }
+
+            // Testing equipment representation
+            const testerGeometry = new THREE.BoxGeometry(3, 0.5, 3);
+            const testerMaterial = new THREE.MeshPhongMaterial({ color: 0x4444ff });
+            const tester = new THREE.Mesh(testerGeometry, testerMaterial);
+            tester.position.y = -0.55;
+            scene.add(tester);
+
+            // Connection pins
+            const connectorGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.1, 8);
+            const connectorMaterial = new THREE.MeshStandardMaterial({ color: 0xffff00, metalness: 0.6, roughness: 0.4 });
+            for (let x = -0.8; x <= 0.8; x += 0.2) {
+                for (let z = -0.8; z <= 0.8; z += 0.2) {
+                    if (Math.abs(x) === 0.8 || Math.abs(z) === 0.8) {
+                        const connector = new THREE.Mesh(connectorGeometry, connectorMaterial);
+                        connector.position.set(x, -0.2, z);
+                        scene.add(connector);
+                    }
+                }
+            }
+
+            // Add animated testing effect
+            const testBeamGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.5, 8);
+            const testBeamMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+            const testBeam = new THREE.Mesh(testBeamGeometry, testBeamMaterial);
+            testBeam.position.set(0, -0.1, 0);
+            scene.add(testBeam);
+
+            new TWEEN.Tween(testBeam.scale)
+                .to({ y: 0.1 }, 500)
+                .repeat(Infinity)
+                .yoyo(true)
+                .start();
+        }
+    </script>
+</body>
+</html>

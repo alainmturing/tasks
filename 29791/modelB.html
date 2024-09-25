@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semiconductor Manufacturing Visualization</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f4f4f4; }
+        #container { width: 100%; height: 100vh; display: flex; }
+        #sidebar { width: 250px; background: #333; color: white; padding: 10px; overflow-y: auto; }
+        #main-content { flex-grow: 1; position: relative; }
+        #scene-container { width: 100%; height: 80%; }
+        #info-panel { padding: 20px; height: 20%; overflow-y: auto; }
+        #quiz-toggle { position: absolute; bottom: 10px; right: 10px; }
+        .step { display: none; }
+        .step.active { display: block; }
+        .nav-button { background: #555; color: white; border: none; padding: 10px; margin: 5px 0; cursor: pointer; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+<div id="container">
+    <div id="sidebar">
+        <h3>Steps</h3>
+        <button class="nav-button" onclick="showStep(0)">Raw Silicon</button>
+        <button class="nav-button" onclick="showStep(1)">Wafer Production</button>
+        <!-- Add more steps here -->
+    </div>
+    <div id="main-content">
+        <div id="scene-container"></div>
+        <div id="info-panel"></div>
+        <button id="quiz-toggle" onclick="toggleQuiz()">Show Quiz</button>
+    </div>
+</div>
+
+<script>
+    let scene, camera, renderer, currentStep = 0;
+    const steps = [
+        {name: 'Raw Silicon', model: createSiliconIngot, info: 'Silicon is purified to produce electronic grade silicon.'},
+        {name: 'Wafer Production', model: createWafer, info: 'The silicon ingot is sliced into thin wafers.'},
+        // Add more steps with model functions and information
+    ];
+
+    function init() {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth * 0.75, window.innerHeight * 0.8);
+        document.getElementById('scene-container').appendChild(renderer.domElement);
+
+        camera.position.z = 5;
+        showStep(0);
+    }
+
+    function showStep(step) {
+        currentStep = step;
+        scene.children = []; // Clear previous model
+        steps[step].model(); // Call function to create model for this step
+        document.getElementById('info-panel').textContent = steps[step].info;
+        updateSidebar(step);
+    }
+
+    function createSiliconIngot() {
+        const geometry = new THREE.CylinderGeometry(1, 1, 3, 32);
+        const material = new THREE.MeshBasicMaterial({color: 0x808080});
+        const cylinder = new THREE.Mesh(geometry, material);
+        scene.add(cylinder);
+    }
+
+    function createWafer() {
+        const geometry = new THREE.CylinderGeometry(2, 2, 0.1, 32);
+        const material = new THREE.MeshBasicMaterial({color: 0x999999});
+        const wafer = new THREE.Mesh(geometry, material);
+        scene.add(wafer);
+    }
+
+    function updateSidebar(step) {
+        const buttons = document.getElementsByClassName('nav-button');
+        for(let btn of buttons) {
+            btn.style.background = '#555';
+        }
+        buttons[step].style.background = '#007BFF';
+    }
+
+    function toggleQuiz() {
+        // Implement quiz toggle functionality
+        alert('Quiz feature would show here!');
+    }
+
+    window.onload = init;
+    window.onresize = () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth * 0.75, window.innerHeight * 0.8);
+    };
+</script>
+
+</body>
+</html>
