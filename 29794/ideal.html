@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>English Learning Tool for Koreans</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f4f8;
+            color: #333;
+        }
+        header {
+            background-color: #4A7080;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        nav {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        nav button {
+            background-color: #fff;
+            border: 2px solid #4A90E2;
+            color: #4A90E2;
+            padding: 10px 20px;
+            margin: 0 10px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        nav button.active {
+            background-color: #4A90E2;
+            color: #fff;
+        }
+        nav button:hover {
+            background-color: #4A90E2;
+            color: #fff;
+        }
+        .container {
+            padding: 20px;
+            max-width: 1000px;
+            margin: auto;
+        }
+        .section {
+            display: none;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        .active {
+            display: block;
+        }
+        /* Reading Passage Styles */
+        .passage {
+            line-height: 1.6;
+            font-size: 1.1em;
+        }
+        .passage .tooltip {
+            border-bottom: 1px dashed #555;
+            cursor: pointer;
+            position: relative;
+        }
+        .passage .tooltip:hover::after {
+            content: attr(data-translate);
+            position: absolute;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 5px;
+            white-space: nowrap;
+            z-index: 100;
+            opacity: 1;
+        }
+        /* Vocabulary Builder Styles */
+        .flashcards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+        .card {
+            width: 150px;
+            height: 100px;
+            perspective: 1000px;
+            cursor: pointer;
+        }
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .card.flip .card-inner {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border: 2px solid #4A90E2;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #fff;
+        }
+        .card-back {
+            background-color: #4A90E2;
+            color: #fff;
+            transform: rotateY(180deg);
+        }
+        /* Quiz Styles */
+        .quiz-container {
+            max-width: 600px;
+            margin: auto;
+        }
+        .quiz-question {
+            margin-bottom: 15px;
+        }
+        .quiz-options {
+            list-style: none;
+            padding: 0;
+        }
+        .quiz-options li {
+            margin-bottom: 10px;
+        }
+        .quiz-options input {
+            margin-right: 10px;
+        }
+        .quiz-result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .correct {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .incorrect {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        /* Buttons */
+        .btn {
+            background-color: #4A90E2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px 5px 0 0;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .btn:hover {
+            background-color: #357ABD;
+        }
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        /* Responsive */
+        @media (max-width: 600px) {
+            .flashcards {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+        .card:hover .card-inner {
+            transform: rotateY(180deg);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>영어 학습 도구</h1>
+        <nav>
+            <button id="reading-btn" onclick="showSection('reading')" class="active">읽기</button>
+            <button id="vocabulary-btn" onclick="showSection('vocabulary')">어휘</button>
+            <button id="quiz-btn" onclick="showSection('quiz')">퀴즈</button>
+        </nav>
+    </header>
+
+    <div class="container">
+        <!-- Reading Section -->
+        <div id="reading" class="section active">
+            <h2>읽기 연습</h2>
+            <div class="passage" id="passage">
+                <p>
+                    The <span class="tooltip" data-translate="아름다운">beautiful</span> <span class="tooltip" data-translate="해변">beach</span> stretched out before us, its <span class="tooltip" data-translate="황금빛">golden</span> sand <span class="tooltip" data-translate="반짝이는">glittering</span> under the <span class="tooltip" data-translate="밝은">bright</span> <span class="tooltip" data-translate="태양">sun</span>. <span class="tooltip" data-translate="파도">Waves</span> <span class="tooltip" data-translate="부드럽게">gently</span> <span class="tooltip" data-translate="속삭이는">whispered</span> as they <span class="tooltip" data-translate="해안을 때리다">lapped</span> against the <span class="tooltip" data-translate="해안">shore</span>, creating a <span class="tooltip" data-translate="평화로운">peaceful</span> <span class="tooltip" data-translate="멜로디">melody</span>.
+                </p>
+            </div>
+        </div>
+    
+        <!-- Vocabulary Section -->
+        <div id="vocabulary" class="section">
+            <h2>어휘 빌더</h2>
+            <div class="flashcards" id="flashcards">
+                <!-- Flashcards will be dynamically inserted here -->
+            </div>
+        </div>
+    
+        <!-- Quiz Section -->
+        <div id="quiz" class="section">
+            <h2>퀴즈</h2>
+            <div class="quiz-container" id="quiz-container">
+                <form id="quiz-form">
+                    <!-- Quiz Questions will be dynamically inserted here -->
+                </form>
+                <button class="btn" onclick="submitQuiz()">제출</button>
+                <div id="quiz-result"></div>
+                <div id="quiz-controls" style="display: none;">
+                    <button class="btn" onclick="retakeQuiz()">다시 시도</button>
+                    <button class="btn" onclick="generateQuiz()">새 퀴즈</button>
+                </div>
+            </div>
+        </div>
+    </div>
+<script>
+    // Vocabulary Data
+    const vocabulary = [
+        { english: 'Beautiful', korean: '아름다운' },
+        { english: 'Beach', korean: '해변' },
+        { english: 'Golden', korean: '황금빛' },
+        { english: 'Glittering', korean: '반짝이는' },
+        { english: 'Bright', korean: '밝은' },
+        { english: 'Sun', korean: '태양' },
+        { english: 'Waves', korean: '파도' },
+        { english: 'Gently', korean: '부드럽게' },
+        { english: 'Whispered', korean: '속삭이는' },
+        { english: 'Lapped', korean: '해안을 때리다' },
+        { english: 'Shore', korean: '해안' },
+        { english: 'Peaceful', korean: '평화로운' },
+        { english: 'Melody', korean: '멜로디' },
+    ];
+
+    // Initialize Flashcards
+    function initFlashcards() {
+        const flashcardsContainer = document.getElementById('flashcards');
+        vocabulary.forEach(word => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <div class="card-inner">
+                    <div class="card-front">
+                        ${word.english}
+                    </div>
+                    <div class="card-back">
+                        ${word.korean}
+                    </div>
+                </div>
+            `;
+            flashcardsContainer.appendChild(card);
+        });
+    }
+
+    // Quiz Data
+    const quizPool = [
+        {
+            question: "What is the Korean translation for 'Hello'?",
+            options: ['안녕하세요', '안녕히 가세요', '감사합니다', '죄송합니다'],
+            answer: '안녕하세요'
+        },
+        {
+            question: "Translate 'Journey' to Korean.",
+            options: ['여행', '여정', '목표', '시간'],
+            answer: '여정'
+        },
+        {
+            question: "What does 'Together' mean in Korean?",
+            options: ['혼자', '함께', '서로', '곁에'],
+            answer: '함께'
+        },
+        {
+            question: "Translate 'Learn' to Korean.",
+            options: ['가르치다', '배우다', '알다', '생각하다'],
+            answer: '배우다'
+        },
+        {
+            question: "What is the Korean for 'Start'?",
+            options: ['끝', '중간', '시작해요', '멈추다'],
+            answer: '시작해요'
+        },
+        {
+            question: "Translate 'Name' to Korean.",
+            options: ['나이', '이름', '직업', '취미'],
+            answer: '이름'
+        },
+        {
+            question: "What does 'User' mean in Korean?",
+            options: ['사용자', '관리자', '개발자', '디자이너'],
+            answer: '사용자'
+        },
+        {
+            question: "Translate 'Help' to Korean.",
+            options: ['도와줄', '도움', '도망가다', '도착하다'],
+            answer: '도와줄'
+        },
+        {
+            question: "What is the Korean translation for 'English'?",
+            options: ['영어', '일본어', '중국어', '프랑스어'],
+            answer: '영어'
+        },
+        {
+            question: "Translate 'Beautiful' to Korean.",
+            options: ['챗', '아름다운', '중국어', '프랑스어'],
+            answer: '아름다운'
+        }
+    ];
+
+    let currentQuiz = [];
+
+    // Generate a unique 2-question quiz
+    function generateQuiz() {
+        const quizForm = document.getElementById('quiz-form');
+        const quizResult = document.getElementById('quiz-result');
+        const quizControls = document.getElementById('quiz-controls');
+        quizForm.innerHTML = '';
+        quizResult.innerHTML = '';
+        quizControls.style.display = 'none';
+
+        // Shuffle and pick first 2 questions
+        const shuffled = quizPool.sort(() => 0.5 - Math.random());
+        currentQuiz = shuffled.slice(0, 2);
+
+        currentQuiz.forEach((q, index) => {
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'quiz-question';
+            questionDiv.innerHTML = `<p>${index + 1}. ${q.question}</p>`;
+            const optionsList = document.createElement('ul');
+            optionsList.className = 'quiz-options';
+            q.options.forEach(option => {
+                const optionItem = document.createElement('li');
+                optionItem.innerHTML = `
+                    <label>
+                        <input type="radio" name="question${index}" value="${option}"> ${option}
+                    </label>
+                `;
+                optionsList.appendChild(optionItem);
+            });
+            questionDiv.appendChild(optionsList);
+            quizForm.appendChild(questionDiv);
+        });
+
+        // Add hidden field to track quiz state
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.id = 'quiz-state';
+        hiddenInput.value = 'active';
+        quizForm.appendChild(hiddenInput);
+    }
+
+    // Submit Quiz
+    function submitQuiz() {
+        const quizForm = document.getElementById('quiz-form');
+        const quizResult = document.getElementById('quiz-result');
+        const quizControls = document.getElementById('quiz-controls');
+
+        // Check if quiz is active
+        const quizState = document.getElementById('quiz-state').value;
+        if (quizState !== 'active') return;
+
+        let correctCount = 0;
+        let total = currentQuiz.length;
+        let incorrectQuestions = [];
+
+        currentQuiz.forEach((q, index) => {
+            const selected = document.querySelector(`input[name="question${index}"]:checked`);
+            if (selected && selected.value === q.answer) {
+                correctCount++;
+            } else {
+                incorrectQuestions.push(index);
+            }
+        });
+
+        // Display Results
+        quizResult.innerHTML = `
+            <div class="quiz-result ${incorrectQuestions.length === 0 ? 'correct' : 'incorrect'}">
+                당신은 ${correctCount} / ${total} 문제를 맞혔습니다.
+            </div>
+        `;
+
+        // Highlight Incorrect Questions
+        incorrectQuestions.forEach(index => {
+            const questionDiv = quizForm.children[index];
+            questionDiv.style.border = '2px solid #e74c3c';
+            questionDiv.style.borderRadius = '5px';
+        });
+
+        // Update quiz state
+        document.getElementById('quiz-state').value = 'submitted';
+        quizControls.style.display = 'block';
+    }
+
+    // Retake Quiz
+    function retakeQuiz() {
+        const quizForm = document.getElementById('quiz-form');
+        const quizResult = document.getElementById('quiz-result');
+        const quizControls = document.getElementById('quiz-controls');
+
+        // Reset styles
+        currentQuiz.forEach((q, index) => {
+            const questionDiv = quizForm.children[index];
+            questionDiv.style.border = 'none';
+        });
+
+        // Reset form
+        quizForm.reset();
+        quizResult.innerHTML = '';
+        quizControls.style.display = 'none';
+        document.getElementById('quiz-state').value = 'active';
+    }
+
+    // Show Section
+    function showSection(sectionId) {
+        const sections = document.querySelectorAll('.section');
+        const buttons = document.querySelectorAll('nav button');
+        
+        sections.forEach(sec => {
+            if (sec.id === sectionId) {
+                sec.classList.add('active');
+            } else {
+                sec.classList.remove('active');
+            }
+        });
+
+        buttons.forEach(btn => {
+            if (btn.id === `${sectionId}-btn`) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+
+        // Initialize flashcards and quizzes when their sections are shown
+        if (sectionId === 'vocabulary' && !document.getElementById('flashcards').hasChildNodes()) {
+            initFlashcards();
+        }
+        if (sectionId === 'quiz' && currentQuiz.length === 0) {
+            generateQuiz();
+        }
+    }
+
+    // Initialize on Page Load
+    window.onload = () => {
+        initFlashcards();
+        generateQuiz();
+    };
+</script>
+
+</body>
+</html>

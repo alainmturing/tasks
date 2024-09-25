@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>English Learning Tool for Koreans</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f4f7f6;
+    margin: 0;
+    padding: 20px;
+    color: #333;
+}
+h1, h2 { color: #2c3e50; }
+section {
+    background: white;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.passage p {
+    position: relative;
+    display: inline-block;
+}
+.passage p span:hover::after {
+    content: attr(data-translation);
+    position: absolute;
+    left: 0;
+    top: 100%;
+    background: #fff9c4;
+    border: 1px solid #ccc;
+    padding: 5px;
+    z-index: 10;
+    border-radius: 4px;
+}
+.flashcard {
+    width: 100px;
+    height: 150px;
+    perspective: 1000px;
+    margin: 10px;
+    display: inline-block;
+}
+.flashcard-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+}
+.flashcard:hover .flashcard-inner {
+    transform: rotateY(180deg);
+}
+.flashcard-front, .flashcard-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+.flashcard-front { background: #ecf0f1; }
+.flashcard-back {
+    background: #e74c3c;
+    color: white;
+    transform: rotateY(180deg);
+}
+.quiz button {
+    background-color: #3498db;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+.quiz .incorrect {
+    background-color: #e74c3c;
+}
+</style>
+</head>
+<body>
+
+<h1>English Learning Tool for Koreans</h1>
+
+<section class="passage">
+    <h2>Interactive Reading</h2>
+    <p>This is an <span data-translation="예시">example</span> passage where you can <span data-translation="마우스를 올리다">hover</span> over words for translation.</p>
+</section>
+
+<section class="vocab">
+    <h2>Vocabulary Builder</h2>
+    <div class="flashcard">
+        <div class="flashcard-inner">
+            <div class="flashcard-front">Example</div>
+            <div class="flashcard-back">예시</div>
+        </div>
+    </div>
+</section>
+
+<section class="quiz">
+    <h2>Quiz</h2>
+    <div id="quiz"></div>
+    <button onclick="submitQuiz()">Submit</button>
+    <div id="results"></div>
+</section>
+
+<script>
+const passages = [
+    { text: "This is an example passage where you can hover over words for translation.", words: ["example", "hover"] }
+];
+
+const vocab = [
+    { english: "Hello", korean: "안녕하세요" },
+    { english: "World", korean: "세계" }
+];
+
+const questions = [
+    { question: "What is the capital of France?", answer: "Paris" },
+    { question: "Translate 'Thank you' to Korean", answer: "감사합니다" },
+    // Add more questions here...
+];
+
+function generateQuiz() {
+    let quizHTML = '';
+    let quizQuestions = shuffleArray(questions).slice(0, 2);
+    quizQuestions.forEach((q, index) => {
+        quizHTML += `<p>${q.question}<br><input type="text" id="q${index}"></p>`;
+    });
+    document.getElementById('quiz').innerHTML = quizHTML;
+}
+
+function submitQuiz() {
+    let correct = 0;
+    let resultsHTML = '';
+    for(let i = 0; i < 2; i++) {
+        let userAnswer = document.getElementById(`q${i}`).value.toLowerCase();
+        let correctAnswer = questions[i].answer.toLowerCase();
+        if(userAnswer === correctAnswer) {
+            correct++;
+            resultsHTML += `<p>Question ${i + 1}: Correct!</p>`;
+        } else {
+            resultsHTML += `<p class="incorrect">Question ${i + 1}: Incorrect. The answer was ${correctAnswer}</p>`;
+        }
+    }
+    document.getElementById('results').innerHTML = `${resultsHTML} Score: ${correct}/2`;
+    setTimeout(generateQuiz, 2000); // Allow quiz regeneration after showing results
+}
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+generateQuiz();
+</script>
+
+</body>
+</html>
