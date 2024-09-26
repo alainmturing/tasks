@@ -60,7 +60,6 @@
             position: absolute;
             width: 60px;
             height: 60px;
-            cursor: pointer;
             transition: transform 0.1s;
         }
         .target:hover {
@@ -256,9 +255,10 @@
             const target = document.createElement('div');
             target.classList.add('target');
 
-            // Create SVG with blue outline
+            // Create SVG with white background and blue outline
             target.innerHTML = `
                 <svg viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="white" />
                     <circle cx="50" cy="50" r="45" stroke="#1E90FF" stroke-width="5" fill="none" />
                     <circle cx="50" cy="50" r="10" fill="red" />
                 </svg>
