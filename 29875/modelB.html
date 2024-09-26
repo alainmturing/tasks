@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Line Runner</title>
+<style>
+    body, html {
+        height: 100%;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #f0f0f0;
+    }
+    #game-container {
+        position: relative;
+        width: 600px;
+        height: 300px;
+        border: 2px solid #000;
+        overflow: hidden;
+        background: url('//via.placeholder.com/600x300') repeat-x;
+        animation: slide 10s linear infinite;
+    }
+    @keyframes slide {
+        0% { background-position: 0 0; }
+        100% { background-position: -600px 0; }
+    }
+    #character {
+        position: absolute;
+        bottom: 0;
+        width: 50px;
+        height: 50px;
+        background: url('//via.placeholder.com/50x50') no-repeat;
+        left: 50px;
+    }
+    .lane {
+        height: 100px;
+        position: relative;
+    }
+    .obstacle {
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        background-color: red;
+    }
+    #score {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    #level-select, #game-over {
+        position: absolute;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    button {
+        margin: 10px 0;
+        padding: 10px;
+        cursor: pointer;
+    }
+</style>
+</head>
+<body>
+<div id="game-container">
+    <div id="character"></div>
+    <div id="score">Score: 0</div>
+    <div id="level-select">
+        <h2>Select Level</h2>
+        <button onclick="startGame('easy')">Easy</button>
+        <button onclick="startGame('medium')">Medium</button>
+        <button onclick="startGame('hard')">Hard</button>
+    </div>
+    <div id="game-over" style="display: none;">
+        <h2>Game Over</h2>
+        <p id="final-score"></p>
+        <button onclick="location.reload()">Restart</button>
+        <button onclick="showLevelSelect()">Back to Levels</button>
+    </div>
+</div>
+
+<script>
+    const gameContainer = document.getElementById('game-container');
+    const character = document.getElementById('character');
+    const scoreDisplay = document.getElementById('score');
+    const gameOverScreen = document.getElementById('game-over');
+    const levelSelect = document.getElementById('level-select');
+    const finalScoreDisplay = document.getElementById('final-score');
+
+    let gameState = {
+        score: 0,
+        lane: 1,
+        obstacles: [],
+        speed: 2,
+        gameLoop: null,
+        level: 'easy'
+    };
+
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(buffer, playbackRate = 1) {
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.playbackRate.value = playbackRate;
+        source.connect(audioContext.destination);
+        source.start(0);
+    }
+
+    // Load sounds (you'll need to create or find these sound files)
+    const collisionSound = loadSound('collision.wav');
+    const runSound = loadSound('run.wav');
+
+    function loadSound(url) {
+        return fetch(url)
+            .then(response => response.arrayBuffer())
+            .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer));
+    }
+
+    function startGame(level) {
+        gameState.level = level;
+        gameState.speed = level === 'easy' ? 2 : (level === 'medium' ? 3 : 4);
+        levelSelect.style.display = 'none';
+        gameState.gameLoop = setInterval(gameLogic, 1000 / 60);
+        // Play running sound in loop
+        playSound(runSound, gameState.speed / 2); // Adjust playback rate with speed
+    }
+
+    function gameLogic() {
+        moveCharacter();
+        moveObstacles();
+        checkCollisions();
+        updateScore();
+    }
+
+    function moveCharacter() {
+        character.style.bottom = (gameState.lane * 100) + 'px';
+    }
+
+    function moveObstacles() {
+        if (Math.random() < 0.02 * gameState.speed) { // More obstacles with higher speed
+            createObstacle();
+        }
+        gameState.obstacles.forEach((obs, index) => {
+            obs.style.left = (parseFloat(obs.style.left) || 0) - gameState.speed + 'px';
+            if (parseFloat(obs.style.left) < -30) {
+                gameContainer.removeChild(obs);
+                gameState.obstacles.splice(index, 1);
+                gameState.score++;
+            }
+        });
+    }
+
+    function createObstacle() {
+        const obstacle = document.createElement('div');
+        obstacle.className = 'obstacle';
+        obstacle.style.left = '600px';
+        obstacle.style.bottom = (Math.floor(Math.random() * 3) * 100) + 'px';
+        gameContainer.appendChild(obstacle);
+        gameState.obstacles.push(obstacle);
+    }
+
+    function checkCollisions() {
+        gameState.obstacles.forEach(obs => {
+            if (Math.abs(parseFloat(obs.style.left) - 50) < 25 && 
+                Math.abs(parseFloat(obs.style.bottom) - (gameState.lane * 100)) < 25) {
+                gameOver();
+            }
+        });
+    }
+
+    function updateScore() {
+        scoreDisplay.textContent = `Score: ${gameState.score}`;
+    }
+
+    function gameOver() {
+        clearInterval(gameState.gameLoop);
+        playSound(collisionSound);
+        finalScoreDisplay.textContent = `Your Score: ${gameState.score}`;
+        gameOverScreen.style.display = 'flex';
+    }
+
+    function showLevelSelect() {
+        gameOverScreen.style.display = 'none';
+        levelSelect.style.display = 'flex';
+    }
+
+    window.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowUp' && gameState.lane > 0) gameState.lane--;
+        if (e.key === 'ArrowDown' && gameState.lane < 2) gameState.lane++;
+    });
+</script>
+</body>
+</html>

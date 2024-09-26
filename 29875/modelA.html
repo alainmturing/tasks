@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Line Runner</title>
+<style>
+    body { 
+        font-family: 'Arial', sans-serif; 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        height: 100vh; 
+        margin: 0; 
+        background-color: #f0f0f0; 
+    }
+    #gameCanvas { 
+        border: 2px solid #000; 
+        background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAAXNSR0IArs4c6QAAACBJREFUKFNjZICC/38QiwX8T+ByR1DQAkE5CJeCIrgo8isAAAD//wMABqKz4D0U0o4AAAAASUVORK5CYII='); 
+        background-repeat: repeat; 
+    }
+    #startScreen, #gameOverScreen {
+        position: absolute;
+        width: 600px;
+        height: 300px;
+        background: white;
+        text-align: center;
+        padding: 20px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    #score {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 255, 255, 0.8);
+        padding: 10px 20px;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    button {
+        padding: 10px 20px;
+        margin: 10px;
+        cursor: pointer;
+    }
+</style>
+</head>
+<body>
+<div id="startScreen">
+    <h1>Line Runner</h1>
+    <button onclick="startGame('easy')">Easy</button>
+    <button onclick="startGame('medium')">Medium</button>
+    <button onclick="startGame('hard')">Hard</button>
+</div>
+<div id="gameOverScreen" style="display: none;">
+    <h2>Game Over!</h2>
+    <p>Your Score: <span id="finalScore"></span></p>
+    <button onclick="location.reload()">Restart</button>
+    <button onclick="document.getElementById('startScreen').style.display='block';this.parentNode.style.display='none';">Level Select</button>
+</div>
+<canvas id="gameCanvas" width="600" height="300" style="display: none;"></canvas>
+<div id="score">Score: 0</div>
+
+<script>
+let canvas, ctx, player, obstacles = [], score = 0, gameLoop, level, audioContext, bufferRun, bufferCrash;
+
+document.addEventListener('keydown', function(event) {
+    if(event.key === 'ArrowUp' && player.lane > 0) player.lane--;
+    else if(event.key === 'ArrowDown' && player.lane < 2) player.lane++;
+});
+
+function startGame(selectedLevel) {
+    level = selectedLevel;
+    document.getElementById('startScreen').style.display = 'none';
+    canvas = document.getElementById('gameCanvas');
+    ctx = canvas.getContext('2d');
+    canvas.style.display = 'block';
+    initGame();
+    gameLoop = setInterval(updateGame, 20);
+}
+
+function initGame() {
+    player = {x: 50, y: 100, width: 30, height: 30, lane: 1};
+    obstacles = [];
+    score = 0;
+    loadSounds();
+}
+
+function loadSounds() {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Running sound
+    let runBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 2, audioContext.sampleRate);
+    let output = runBuffer.getChannelData(0);
+    for(let i = 0; i < runBuffer.duration * audioContext.sampleRate; i++) {
+        output[i] = Math.sin(i * 2 * Math.PI * 440 / audioContext.sampleRate) * (i % 2 ? 0.1 : -0.1);
+    }
+    bufferRun = runBuffer;
+
+    // Crash sound
+    let crashBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.5, audioContext.sampleRate);
+    output = crashBuffer.getChannelData(0);
+    for(let i = 0; i < crashBuffer.duration * audioContext.sampleRate; i++) {
+        output[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioContext.sampleRate * 0.1));
+    }
+    bufferCrash = crashBuffer;
+}
+
+function playSound(buffer) {
+    let source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    source.start(0);
+}
+
+function updateGame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    movePlayer();
+    updateObstacles();
+    draw();
+    checkCollision();
+    updateScore();
+}
+
+function movePlayer() {
+    player.y = 100 + player.lane * 100;
+    playSound(bufferRun);
+}
+
+function updateObstacles() {
+    if(Math.random() < (0.01 + (level === 'hard' ? 0.01 : level === 'medium' ? 0.005 : 0.001))) {
+        obstacles.push({x: canvas.width, y: Math.floor(Math.random() * 3) * 100, width: 20, height: 20});
+    }
+
+    obstacles.forEach((obstacle, index) => {
+        obstacle.x -= 2 + (level === 'hard' ? 3 : level === 'medium' ? 2 : 1);
+        if(obstacle.x + obstacle.width < 0) obstacles.splice(index, 1);
+    });
+}
+
+function draw() {
+    // Draw player
+    ctx.fillStyle = 'blue';
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+    
+    // Draw obstacles
+    ctx.fillStyle = 'red';
+    obstacles.forEach(obstacle => ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height));
+}
+
+function checkCollision() {
+    obstacles.forEach(obstacle => {
+        if(player.x < obstacle.x + obstacle.width &&
+           player.x + player.width > obstacle.x &&
+           player.y < obstacle.y + obstacle.height &&
+           player.y + player.height > obstacle.y) {
+            playSound(bufferCrash);
+            gameOver();
+        }
+    });
+}
+
+function updateScore() {
+    score++;
+    document.getElementById('score').innerText = `Score: ${score}`;
+}
+
+function gameOver() {
+    clearInterval(gameLoop);
+    document.getElementById('finalScore').innerText = score;
+    document.getElementById('gameOverScreen').style.display = 'block';
+}
+</script>
+</body>
+</html>

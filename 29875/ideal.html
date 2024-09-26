@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Line Runner</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #1e1e1e;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            margin: 50px auto;
+            border: 2px solid #fff;
+            background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%);
+            overflow: hidden;
+        }
+
+        #startScreen, #gameOverScreen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(30, 30, 30, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2;
+            text-align: center;
+        }
+
+        .button {
+            padding: 15px 30px;
+            margin: 10px;
+            background-color: #ff7f50;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        .button:hover {
+            background-color: #ff6347;
+            transform: scale(1.05);
+        }
+
+        #scoreBoard {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border: 2px solid #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #000;
+            font-size: 24px;
+            z-index: 1;
+        }
+
+        #player {
+            position: absolute;
+            bottom: 50px;
+            left: 100px;
+            width: 60px;
+            height: 60px;
+            background-color: #ff0000;
+            border-radius: 50%;
+            transition: top 0.3s;
+            z-index: 1;
+        }
+
+        .obstacle {
+            position: absolute;
+            bottom: 50px;
+            width: 60px;
+            height: 60px;
+            background-color: #00ff00;
+            transition: left 0.3s;
+            z-index: 1;
+        }
+
+        /* Obstacle Types */
+        .obstacle.rock {
+            background-color: #808080;
+            border-radius: 10px;
+        }
+
+        .obstacle.spike {
+            width: 0;
+            height: 0;
+            border-left: 30px solid transparent;
+            border-right: 30px solid transparent;
+            border-bottom: 60px solid #ffff00;
+            background-color: transparent;
+        }
+
+        .obstacle.bird {
+            background-color: #0000ff;
+            clip-path: polygon(0% 35%, 50% 0%, 100% 35%, 100% 70%, 50% 100%, 0% 70%);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 850px) {
+            #gameContainer {
+                width: 90%;
+                height: 70vh;
+            }
+        }
+        .path-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-image: linear-gradient(to right, #ffffff 50%, transparent 50%);
+            background-size: 20px 100%;
+            background-repeat: repeat-x;
+            z-index: 0;
+        }
+
+        .path-separator {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: #ffffff;
+            z-index: 0;
+        }
+
+        #topPath { top: 180px; }
+        #middlePath { top: 300px; }
+        #bottomPath { top: 420px; }
+        #topSeparator { top: 240px; }
+        #bottomSeparator { top: 360px; }
+        #player, .obstacle {
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <!-- Start Screen -->
+        <div id="startScreen">
+            <h1 style="font-size: 48px; margin-bottom: 20px;">Line Runner</h1>
+            <h3 style="margin-bottom: 30px;">Select Difficulty</h3>
+            <button class="button" onclick="startGame('Easy')">Easy</button>
+            <button class="button" onclick="startGame('Medium')">Medium</button>
+            <button class="button" onclick="startGame('Hard')">Hard</button>
+        </div>
+
+        <!-- Score Board -->
+        <div id="scoreBoard">Score: 0</div>
+
+        <!-- Path Lines -->
+        <div class="path-line" id="topPath"></div>
+        <div class="path-line" id="middlePath"></div>
+        <div class="path-line" id="bottomPath"></div>
+        <!-- Path Separators -->
+        <div class="path-separator" id="topSeparator"></div>
+        <div class="path-separator" id="bottomSeparator"></div>
+
+        <!-- Player -->
+        <div id="player"></div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" style="display: none;">
+            <h1 style="font-size: 48px; margin-bottom: 20px;">Game Over</h1>
+            <h3 style="margin-bottom: 30px;">Your Score: <span id="finalScore">0</span></h3>
+            <button class="button" onclick="restartGame()">Restart</button>
+            <button class="button" onclick="backToMenu()">Main Menu</button>
+        </div>
+    </div>
+
+    <script>
+        // Game Variables
+        const gameContainer = document.getElementById('gameContainer');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const scoreBoard = document.getElementById('scoreBoard');
+        const finalScore = document.getElementById('finalScore');
+        const player = document.getElementById('player');
+
+        let gameInterval;
+        let obstacleInterval;
+        let score = 0;
+        let lane = 1; // 0: Top, 1: Middle, 2: Bottom
+        const lanes = [150, 270, 390]; // Y positions for lanes
+        let obstacles = [];
+        let difficulty = 'Easy';
+        let speed = 5;
+        let obstacleFrequency = 2000;
+
+        // Sound Effects using Web Audio API
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioContext();
+
+        function playSound(frequency, type, duration) {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.type = type;
+            oscillator.frequency.value = frequency;
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + duration);
+        }
+
+        function startGame(selectedDifficulty) {
+            difficulty = selectedDifficulty;
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            score = 0;
+            scoreBoard.innerText = 'Score: 0';
+            lane = 1;
+            player.style.top = lanes[lane] + 'px';
+            // Remove existing obstacles
+            obstacles.forEach(obs => gameContainer.removeChild(obs.element));
+            obstacles = [];
+
+            // Set difficulty
+            switch(difficulty) {
+                case 'Easy':
+                    obstacleFrequency = 2000;
+                    speed = 5;
+                    break;
+                case 'Medium':
+                    obstacleFrequency = 1500;
+                    speed = 7;
+                    break;
+                case 'Hard':
+                    obstacleFrequency = 1000;
+                    speed = 10;
+                    break;
+                default:
+                    obstacleFrequency = 2000;
+                    speed = 5;
+            }
+
+            // Start Game Loop
+            gameInterval = setInterval(updateGame, 30);
+            obstacleInterval = setInterval(createObstacle, obstacleFrequency);
+        }
+
+        function updateGame() {
+            score += 1;
+            scoreBoard.innerText = 'Score: ' + score;
+
+            obstacles.forEach((obs, index) => {
+                obs.x -= speed;
+                obs.element.style.left = obs.x + 'px';
+
+                // Collision Detection
+                const playerRect = player.getBoundingClientRect();
+                const obsRect = obs.element.getBoundingClientRect();
+
+                if (playerRect.left < obsRect.left + obsRect.width &&
+                    playerRect.left + playerRect.width > obsRect.left &&
+                    playerRect.top < obsRect.top + obsRect.height &&
+                    playerRect.top + playerRect.height > obsRect.top) {
+                        endGame();
+                }
+
+                // Remove off-screen obstacles
+                if (obs.x < -60) {
+                    gameContainer.removeChild(obs.element);
+                    obstacles.splice(index, 1);
+                }
+            });
+        }
+
+        function createObstacle() {
+            const obstacle = document.createElement('div');
+            obstacle.classList.add('obstacle');
+
+            // Randomly choose obstacle type
+            const types = ['rock', 'spike', 'bird'];
+            const chosenType = types[Math.floor(Math.random() * types.length)];
+            obstacle.classList.add(chosenType);
+
+            // Set lane based on obstacle type
+            let obstacleLane;
+            if (chosenType === 'bird') {
+                // Birds fly, so place them in the top lane with some variation
+                obstacleLane = Math.floor(Math.random() * 2);
+                // Adjust vertical position for flying
+                obstacle.style.bottom = (lanes[obstacleLane] + 100) + 'px';
+            } else {
+                obstacleLane = Math.floor(Math.random() * lanes.length);
+                obstacle.style.bottom = lanes[obstacleLane] + 'px';
+            }
+
+            obstacle.style.left = '800px';
+            gameContainer.appendChild(obstacle);
+
+            obstacles.push({
+                element: obstacle,
+                lane: obstacleLane,
+                x: 800
+            });
+
+            // Play obstacle appearance sound
+            playSound(250, 'square', 0.1);
+        }
+
+        function endGame() {
+            clearInterval(gameInterval);
+            clearInterval(obstacleInterval);
+            finalScore.innerText = score;
+            gameOverScreen.style.display = 'flex';
+
+            // Play collision sound
+            playSound(100, 'sawtooth', 0.5);
+        }
+
+        function restartGame() {
+            startGame(difficulty);
+        }
+
+        function backToMenu() {
+            gameOverScreen.style.display = 'none';
+            startScreen.style.display = 'flex';
+        }
+
+        // Handle Player Movement
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowUp') {
+                if (lane > 0) {
+                    lane--;
+                    player.style.top = lanes[lane] + 'px';
+                    playSound(300, 'triangle', 0.1);
+                }
+            } else if (e.key === 'ArrowDown') {
+                if (lane < lanes.length - 1) {
+                    lane++;
+                    player.style.top = lanes[lane] + 'px';
+                    playSound(300, 'triangle', 0.1);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
