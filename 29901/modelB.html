@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Space Rocket</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        #gameCanvas { display: block; }
+        #scoreBoard { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); 
+                      color: white; font-family: Arial, sans-serif; font-size: 24px; 
+                      background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="scoreBoard">Score: <span id="score">0</span></div>
+<div id="levelSelect" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; text-align: center;">
+    <h2>Select Difficulty</h2>
+    <button onclick="startGame(1)">Easy</button>
+    <button onclick="startGame(2)">Medium</button>
+    <button onclick="startGame(3)">Hard</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+
+<script type="module">
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas') });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    // Phaser game config
+    const config = {
+        type: Phaser.WEBGL,
+        width: window.innerWidth,
+        height: window.innerHeight,
+        scene: {
+            create: create,
+            update: update
+        },
+        audio: {
+            noAudio: false,
+            disableWebAudio: false
+        }
+    };
+
+    let game = new Phaser.Game(config);
+    let rocket;
+    let cursors;
+    let meteors;
+    let score = 0;
+    let scoreText;
+    let level = 1;
+    let gameSound, collisionSound;
+
+    function create() {
+        // Background stars
+        for (let i = 0; i < 500; i++) {
+            let geometry = new THREE.SphereGeometry(0.5, 32, 32);
+            let material = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            let star = new THREE.Mesh(geometry, material);
+            star.position.set(Math.random() * 2000 - 1000, Math.random() * 2000 - 1000, Math.random() * 2000 - 1000);
+            scene.add(star);
+        }
+
+        // Rocket creation would go here with Three.js, simplified for this example
+        rocket = this.add.rectangle(100, window.innerHeight / 2, 50, 100, 0x6666ff).setOrigin(0, 0.5);
+
+        // Meteors group
+        meteors = this.physics.add.group();
+
+        // Score
+        scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#FFF' });
+        
+        // Audio
+        gameSound = this.sound.add('gameMusic', { loop: true, volume: 0.3 });
+        collisionSound = this.sound.add('collision', { volume: 0.5 });
+        gameSound.play();
+
+        // Controls
+        cursors = this.input.keyboard.createCursorKeys();
+
+        // Spawn meteors
+        this.time.addEvent({
+            delay: 1500 / level,
+            callback: spawnMeteor,
+            callbackScope: this,
+            loop: true
+        });
+
+        // Collision detection
+        this.physics.add.collider(rocket, meteors, hitMeteor, null, this);
+    }
+
+    function update() {
+        // Rocket movement
+        if (cursors.up.isDown) rocket.y -= 5;
+        if (cursors.down.isDown) rocket.y += 5;
+        if (cursors.left.isDown) rocket.x -= 5;
+        if (cursors.right.isDown) rocket.x += 5;
+
+        // Keep rocket within bounds
+        rocket.y = Phaser.Math.Clamp(rocket.y, 50, window.innerHeight - 50);
+        rocket.x = Phaser.Math.Clamp(rocket.x, 0, window.innerWidth - 50);
+
+        // Update score based on time or distance traveled
+        score += 1;
+        scoreText.setText('Score: ' + score);
+
+        // Camera follows the rocket
+        camera.position.x = rocket.x - window.innerWidth / 4;
+        camera.position.y = rocket.y;
+    }
+
+    function spawnMeteor() {
+        let meteor = meteors.create(rocket.x + window.innerWidth, Phaser.Math.Between(50, window.innerHeight - 50), 'meteor');
+        meteor.setVelocityX(-100 * level);
+        meteor.setCollideWorldBounds(false);
+    }
+
+    function hitMeteor() {
+        collisionSound.play();
+        this.physics.pause();
+        gameSound.stop();
+        alert('Game Over! Your score: ' + score);
+        location.reload(); // Simple restart mechanism
+    }
+
+    function startGame(difficulty) {
+        level = difficulty;
+        document.getElementById('levelSelect').style.display = 'none';
+        gameSound.play();
+    }
+
+    // Assume 'meteor' and audio assets are loaded elsewhere in your setup
+</script>
+
+</body>
+</html>

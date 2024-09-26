@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Space Rocket</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        .score-box {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border: 2px solid #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #fff;
+            font-size: 24px;
+            z-index: 1;
+        }
+        .menu, .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            color: #fff;
+            z-index: 2;
+        }
+        .menu button, .game-over button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 18px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background: #1e90ff;
+            color: #fff;
+            transition: background 0.3s;
+        }
+        .menu button:hover, .game-over button:hover {
+            background: #63b3ed;
+        }
+        .game-over button {
+            background: #ff4c4c;
+        }
+        .game-over button:hover {
+            background: #ff7f7f;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+
+    <!-- Phaser 3 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+
+    <script>
+        const config = {
+            type: Phaser.AUTO,
+            width: window.innerWidth,
+            height: window.innerHeight,
+            parent: 'game-container',
+            backgroundColor: '#000020',
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
+        };
+
+        const game = new Phaser.Game(config);
+
+        let rocket;
+        let cursors;
+        let meteors;
+        let score = 0;
+        let scoreBox;
+        let gameOverFlag = false;
+        let level = 'Easy';
+        let meteorTimer;
+        let stars;
+        let menu;
+        let gameOverMenu;
+        let engineSound, collisionSound;
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function preload() {
+            // No preloading needed
+        }
+
+        function create() {
+            // Create stars
+            stars = this.add.group();
+            for (let i = 0; i < 200; i++) {
+                const x = Phaser.Math.Between(0, config.width);
+                const y = Phaser.Math.Between(0, config.height);
+                const star = this.add.circle(x, y, 1, 0xffffff, 1);
+                stars.add(star);
+            }
+
+            // Generate rocket texture
+            const rocketGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+            rocketGraphics.fillStyle(0xcccccc, 1);
+            rocketGraphics.fillRect(-30, -15, 60, 30);
+            rocketGraphics.fillStyle(0xff0000, 1);
+            rocketGraphics.fillStyle(0x0000ff, 1);
+            rocketGraphics.fillRect(-30, -3, 10, 6);
+            rocketGraphics.generateTexture('rocket', 60, 30);
+            rocketGraphics.destroy();
+
+            // Generate meteor texture
+            const meteorGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+            meteorGraphics.fillStyle(0x888888, 1);
+            meteorGraphics.fillCircle(20, 20, 20);
+            meteorGraphics.generateTexture('meteor', 40, 40);
+            meteorGraphics.destroy();
+
+            // Create rocket sprite
+            rocket = this.physics.add.sprite(config.width / 4, config.height / 2, 'rocket');
+            rocket.setCollideWorldBounds(true);
+            rocket.setOrigin(0.5, 0.5);
+            rocket.setVisible(false);  // Hide rocket initially
+
+            // Create meteors group
+            meteors = this.physics.add.group();
+
+            // Collision detection
+            this.physics.add.overlap(rocket, meteors, hitMeteor, null, this);
+
+            // Input
+            cursors = this.input.keyboard.createCursorKeys();
+
+            // Score display
+            scoreBox = document.createElement('div');
+            scoreBox.className = 'score-box';
+            scoreBox.innerText = 'Score: 0';
+            scoreBox.style.display = 'none';  // Hide score initially
+            document.getElementById('game-container').appendChild(scoreBox);
+
+            // Create menus
+            createMenu.call(this);
+
+            // Initialize sounds
+            initSounds.call(this);
+        }
+
+        function update(time, delta) {
+            if (gameOverFlag) return;
+
+            // Move stars
+            stars.getChildren().forEach(star => {
+                star.x -= 1;
+                if (star.x < 0) {
+                    star.x = config.width;
+                }
+            });
+
+            if (!rocket.visible) return;  // Don't update if game hasn't started
+
+            // Rocket movement and rotation
+            if (cursors.up.isDown) {
+                rocket.y -= 5;
+                rocket.angle = -15;
+            } else if (cursors.down.isDown) {
+                rocket.y += 5;
+                rocket.angle = 15;
+            } else if (cursors.right.isDown) {
+                rocket.angle = 0;
+            } else {
+                rocket.angle = 0;
+            }
+
+            // Update score based on time
+            score += delta / 1000;
+            scoreBox.innerText = 'Score: ' + Math.floor(score);
+
+            // Remove meteors that are off-screen
+            meteors.getChildren().forEach(function(meteor) {
+                if (meteor.x < -50) {
+                    meteors.remove(meteor, true, true);
+                }
+            });
+        }
+
+        function hitMeteor(rocket, meteor) {
+            this.physics.pause();
+            stopEngineSound.call(this);
+            playCollisionSound.call(this);
+            gameOverFlag = true;
+            showGameOverMenu.call(this);
+        }
+
+        function spawnMeteor() {
+            const y = Phaser.Math.Between(50, config.height - 50);
+            const meteor = meteors.create(config.width + 50, y, 'meteor');
+            meteor.setVelocityX(-getMeteorSpeed());
+            meteor.setCollideWorldBounds(false);
+            meteor.setScale(1.5);
+            meteor.setOrigin(0.5, 0.5);
+        }
+
+        function getMeteorSpeed() {
+            switch(level) {
+                case 'Easy':
+                    return Phaser.Math.Between(100, 200);
+                case 'Medium':
+                    return Phaser.Math.Between(150, 250);
+                case 'Hard':
+                    return Phaser.Math.Between(200, 300);
+                default:
+                    return 150;
+            }
+        }
+
+        function createMenu() {
+            menu = document.createElement('div');
+            menu.className = 'menu';
+            const title = document.createElement('h1');
+            title.innerText = 'Space Rocket';
+            menu.appendChild(title);
+
+            const easyBtn = document.createElement('button');
+            easyBtn.innerText = 'Easy';
+            easyBtn.onclick = () => startGame.call(this, 'Easy');
+            menu.appendChild(easyBtn);
+
+            const mediumBtn = document.createElement('button');
+            mediumBtn.innerText = 'Medium';
+            mediumBtn.onclick = () => startGame.call(this, 'Medium');
+            menu.appendChild(mediumBtn);
+
+            const hardBtn = document.createElement('button');
+            hardBtn.innerText = 'Hard';
+            hardBtn.onclick = () => startGame.call(this, 'Hard');
+            menu.appendChild(hardBtn);
+
+            document.getElementById('game-container').appendChild(menu);
+        }
+
+        function startGame(selectedLevel) {
+            level = selectedLevel;
+            menu.style.display = 'none';
+            scoreBox.style.display = 'block';
+            rocket.setVisible(true);
+
+            playEngineSound.call(this);
+
+            meteorTimer = this.time.addEvent({
+                delay: getMeteorDelay(),
+                callback: spawnMeteor,
+                callbackScope: this,
+                loop: true
+            });
+
+            this.time.addEvent({
+                delay: 10000,
+                callback: increaseDifficulty,
+                callbackScope: this,
+                loop: true
+            });
+        }
+
+        function getMeteorDelay() {
+            switch(level) {
+                case 'Easy':
+                    return 2000;
+                case 'Medium':
+                    return 1500;
+                case 'Hard':
+                    return 1000;
+                default:
+                    return 2000;
+            }
+        }
+
+        function increaseDifficulty() {
+            if (meteorTimer.delay > 500) {
+                meteorTimer.delay -= 200;
+                meteorTimer.reset({
+                    delay: meteorTimer.delay,
+                    callback: spawnMeteor,
+                    callbackScope: this,
+                    loop: true
+                });
+            }
+        }
+
+        function showGameOverMenu() {
+            gameOverMenu = document.createElement('div');
+            gameOverMenu.className = 'game-over';
+            const overText = document.createElement('h1');
+            overText.innerText = 'Game Over';
+            gameOverMenu.appendChild(overText);
+
+            const finalScore = document.createElement('p');
+            finalScore.innerText = 'Score: ' + Math.floor(score);
+            gameOverMenu.appendChild(finalScore);
+
+            const restartBtn = document.createElement('button');
+            restartBtn.innerText = 'Restart';
+            restartBtn.onclick = () => restartGame.call(this);
+            gameOverMenu.appendChild(restartBtn);
+
+            const menuBtn = document.createElement('button');
+            menuBtn.innerText = 'Main Menu';
+            menuBtn.onclick = () => goToMenu.call(this);
+            gameOverMenu.appendChild(menuBtn);
+
+            document.getElementById('game-container').appendChild(gameOverMenu);
+        }
+
+        function restartGame() {
+            gameOverFlag = false;
+            score = 0;
+            scoreBox.innerText = 'Score: 0';
+            gameOverMenu.style.display = 'none';
+
+            rocket.setPosition(config.width / 4, config.height / 2);
+            rocket.setVelocity(0, 0);
+            rocket.angle = 0;
+
+            this.physics.resume();
+
+            meteors.clear(true, true);
+
+            meteorTimer.remove(false);
+            meteorTimer = this.time.addEvent({
+                delay: getMeteorDelay(),
+                callback: spawnMeteor,
+                callbackScope: this,
+                loop: true
+            });
+
+            this.time.removeAllEvents();
+
+            this.time.addEvent({
+                delay: 10000,
+                callback: increaseDifficulty,
+                callbackScope: this,
+                loop: true
+            });
+
+            playEngineSound.call(this);
+        }
+
+        function goToMenu() {
+            gameOverFlag = false;
+            score = 0;
+            scoreBox.innerText = 'Score: 0';
+            scoreBox.style.display = 'none';
+            gameOverMenu.style.display = 'none';
+
+            rocket.setPosition(config.width / 4, config.height / 2);
+            rocket.setVelocity(0, 0);
+            rocket.angle = 0;
+            rocket.setVisible(false);
+
+            this.physics.resume();
+
+            meteors.clear(true, true);
+
+            if (meteorTimer) {
+                meteorTimer.remove(false);
+            }
+            this.time.removeAllEvents();
+
+            menu.style.display = 'block';
+
+            stopEngineSound.call(this);
+        }
+
+        function initSounds() {
+            engineSound = audioCtx.createOscillator();
+            engineSound.type = 'sawtooth';
+            engineSound.frequency.setValueAtTime(440, audioCtx.currentTime);
+            engineSound.volume = audioCtx.createGain();
+            engineSound.volume.gain.setValueAtTime(0, audioCtx.currentTime);
+            engineSound.connect(engineSound.volume);
+            engineSound.volume.connect(audioCtx.destination);
+            engineSound.start();
+
+            collisionSound = audioCtx.createOscillator();
+            collisionSound.type = 'triangle';
+            collisionSound.frequency.setValueAtTime(200, audioCtx.currentTime);
+            collisionSound.volume = audioCtx.createGain();
+            collisionSound.volume.gain.setValueAtTime(0, audioCtx.currentTime);
+            collisionSound.connect(collisionSound.volume);
+            collisionSound.volume.connect(audioCtx.destination);
+            collisionSound.start();
+        }
+
+        function playEngineSound() {
+            engineSound.volume.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        }
+
+        function stopEngineSound() {
+            engineSound.volume.gain.setValueAtTime(0, audioCtx.currentTime);
+        }
+
+        function playCollisionSound() {
+            collisionSound.volume.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            setTimeout(() => {
+                collisionSound.volume.gain.setValueAtTime(0, audioCtx.currentTime);
+            }, 100);
+        }
+
+        window.addEventListener('resize', () => {
+            game.scale.resize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
