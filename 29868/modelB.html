@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bubble Shooter</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #000; 
+        }
+        #gameCanvas {
+            display: block;
+            background: url('data:image/png;base64,...'); /* Background image */
+            background-size: cover;
+        }
+        #score, #lives {
+            position: absolute;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #score { top: 10px; left: 10px; }
+        #lives { top: 10px; right: 10px; }
+    </style>
+</head>
+<body>
+<div id="score">Score: 0</div>
+<div id="lives">Lives: 3</div>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Audio
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(buffer) {
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioContext.destination);
+        source.start();
+    }
+
+    // Load sounds
+    let shootSound;
+    fetch('shoot.wav')
+        .then(response => response.arrayBuffer())
+        .then(buffer => audioContext.decodeAudioData(buffer, decodedData => shootSound = decodedData));
+
+    // Game variables
+    let player = {x: 50, y: canvas.height / 2, width: 40, height: 40, dy: 5};
+    let projectiles = [];
+    let bubbles = [];
+    let score = 0;
+    let lives = 3;
+    let difficulty = 'Easy';
+
+    // Player movement
+    window.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowUp') player.y -= player.dy;
+        if (e.key === 'ArrowDown') player.y += player.dy;
+        player.y = Math.max(0, Math.min(player.y, canvas.height - player.height));
+    });
+
+    // Shooting
+    canvas.addEventListener('click', shoot);
+    window.addEventListener('keydown', function(e) {
+        if (e.code === 'Space') shoot();
+    });
+
+    function shoot() {
+        projectiles.push({x: player.x + player.width, y: player.y + player.height / 2, dx: 10});
+        if (shootSound) playSound(shootSound);
+    }
+
+    // Bubble creation
+    function spawnBubble() {
+        const size = Math.random() * 40 + 20;
+        bubbles.push({
+            x: canvas.width,
+            y: Math.random() * (canvas.height - size),
+            size: size,
+            dx: -(Math.random() * (difficulty === 'Hard' ? 6 : 3) + 1)
+        });
+    }
+
+    // Game loop
+    function gameLoop() {
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Update and draw player
+        ctx.fillStyle = 'blue';
+        ctx.fillRect(player.x, player.y, player.width, player.height);
+
+        // Projectiles
+        projectiles.forEach((p, index) => {
+            p.x += p.dx;
+            ctx.fillStyle = 'green';
+            ctx.fillRect(p.x, p.y, 5, 2);
+            if (p.x > canvas.width) projectiles.splice(index, 1);
+        });
+
+        // Bubbles
+        bubbles.forEach((bubble, bIndex) => {
+            bubble.x += bubble.dx;
+            ctx.beginPath();
+            ctx.arc(bubble.x, bubble.y, bubble.size, 0, Math.PI * 2);
+            ctx.fillStyle = 'red';
+            ctx.fill();
+            if (bubble.x + bubble.size < 0) bubbles.splice(bIndex, 1);
+        });
+
+        // Collision detection
+        bubbles.forEach((bubble, bIndex) => {
+            if (
+                player.x < bubble.x + bubble.size &&
+                player.x + player.width > bubble.x &&
+                player.y < bubble.y + bubble.size &&
+                player.y + player.height > bubble.y
+            ) {
+                lives--;
+                bubbles.splice(bIndex, 1);
+            }
+            projectiles.forEach((proj, pIndex) => {
+                if (
+                    proj.x < bubble.x + bubble.size &&
+                    proj.x > bubble.x &&
+                    proj.y < bubble.y + bubble.size &&
+                    proj.y > bubble.y
+                ) {
+                    score += 1;
+                    bubbles.splice(bIndex, 1);
+                    projectiles.splice(pIndex, 1);
+                }
+            });
+        });
+
+        // Update UI
+        document.getElementById('score').textContent = `Score: ${score}`;
+        document.getElementById('lives').textContent = `Lives: ${lives}`;
+
+        // Game over
+        if (lives <= 0) {
+            alert('Game Over! Your Score: ' + score);
+            location.reload(); // Reset game
+        }
+
+        // Difficulty based bubble spawn
+        if (Math.random() < (difficulty === 'Hard' ? 0.03 : (difficulty === 'Difficult' ? 0.02 : 0.01))) {
+            spawnBubble();
+        }
+
+        score += 0.05; // Time alive score
+        requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+</script>
+</body>
+</html>

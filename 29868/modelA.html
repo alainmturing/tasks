@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bubble Shooter</title>
+<style>
+body { margin: 0; overflow: hidden; background-color: #f0f0f0; }
+#gameCanvas { display: block; background: #ffffff; }
+#score, #lives, #level { position: absolute; color: white; font-family: Arial, sans-serif; }
+#score { top: 10px; left: 10px; }
+#lives { top: 10px; right: 10px; }
+#level { bottom: 10px; left: 10px; }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="score">Score: 0</div>
+<div id="lives">Lives: 3</div>
+<div id="level">Level: Easy</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/5.3.3/pixi.min.js"></script>
+<script>
+// Setup PIXI.js
+const app = new PIXI.Application({ width: 800, height: 600, backgroundColor: 0x1099bb });
+document.body.appendChild(app.view);
+const canvas = document.getElementById('gameCanvas');
+canvas.width = 800;
+canvas.height = 600;
+
+// Game variables
+let player, bubbles = [], projectiles = [], lives = 3, score = 0, level = 'Easy', gameLoop, audioContext;
+
+// Levels configuration
+const levels = {
+    'Easy': { speed: 1, spawnRate: 2000 },
+    'Difficult': { speed: 1.5, spawnRate: 1500 },
+    'Hard': { speed: 2, spawnRate: 1000 }
+};
+
+// Load assets
+PIXI.Loader.shared
+    .add('player', 'path/to/player.png')
+    .add('bubble', 'path/to/bubble.png')
+    .add('projectile', 'path/to/projectile.png')
+    .load(setup);
+
+function setup() {
+    // Create player
+    player = new PIXI.Sprite(PIXI.Loader.shared.resources['player'].texture);
+    player.anchor.set(0.5);
+    player.x = 50;
+    player.y = app.screen.height / 2;
+    app.stage.addChild(player);
+
+    // Audio setup
+    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+    audioContext = new AudioContext();
+    
+    // Event listeners
+    document.addEventListener('keydown', onKeyDown);
+    document.addEventListener('click', shoot);
+
+    // Start game loop
+    gameLoop = setInterval(gameTick, 1000/60);
+    spawnBubble();
+}
+
+function gameTick() {
+    // Move player
+    if(player.y < 0) player.y = 0;
+    if(player.y > app.screen.height) player.y = app.screen.height;
+
+    // Move bubbles and check collisions
+    bubbles.forEach((bubble, index) => {
+        bubble.x -= levels[level].speed;
+        if(checkCollision(player, bubble)) {
+            loseLife();
+            app.stage.removeChild(bubble);
+            bubbles.splice(index, 1);
+        } else if(bubble.x < -50) {
+            app.stage.removeChild(bubble);
+            bubbles.splice(index, 1);
+        }
+    });
+
+    // Move projectiles
+    projectiles.forEach((proj, index) => {
+        proj.x += 5;
+        bubbles.forEach((bubble, bIndex) => {
+            if(checkCollision(proj, bubble)) {
+                app.stage.removeChild(proj);
+                app.stage.removeChild(bubble);
+                projectiles.splice(index, 1);
+                bubbles.splice(bIndex, 1);
+                score += 1;
+                updateScore();
+            }
+        });
+        if(proj.x > app.screen.width) {
+            app.stage.removeChild(proj);
+            projectiles.splice(index, 1);
+        }
+    });
+
+    // Update score for time alive
+    score += 5 / 60;  // +5 points per second
+    updateScore();
+}
+
+function onKeyDown(e) {
+    if(e.keyCode === 38) { // Up arrow
+        player.y -= 10;
+    } else if(e.keyCode === 40) { // Down arrow
+        player.y += 10;
+    }
+}
+
+function shoot() {
+    let projectile = new PIXI.Sprite(PIXI.Loader.shared.resources['projectile'].texture);
+    projectile.anchor.set(0.5);
+    projectile.x = player.x + 20;
+    projectile.y = player.y;
+    app.stage.addChild(projectile);
+    projectiles.push(projectile);
+    
+    // Play shooting sound
+    playSound('path/to/shoot.wav');
+}
+
+function spawnBubble() {
+    let bubble = new PIXI.Sprite(PIXI.Loader.shared.resources['bubble'].texture);
+    bubble.anchor.set(0.5);
+    bubble.x = app.screen.width + 50;
+    bubble.y = Math.random() * app.screen.height;
+    app.stage.addChild(bubble);
+    bubbles.push(bubble);
+    setTimeout(spawnBubble, levels[level].spawnRate);
+}
+
+function loseLife() {
+    lives--;
+    document.getElementById('lives').innerText = `Lives: ${lives}`;
+    if(lives <= 0) {
+        endGame();
+    }
+}
+
+function endGame() {
+    clearInterval(gameLoop);
+    alert(`Game Over! Your score: ${Math.floor(score)}`);
+    // Here you might want to reset or restart the game
+}
+
+function updateScore() {
+    document.getElementById('score').innerText = `Score: ${Math.floor(score)}`;
+}
+
+function checkCollision(sprite1, sprite2) {
+    const bounds1 = sprite1.getBounds();
+    const bounds2 = sprite2.getBounds();
+    return bounds1.x + bounds1.width > bounds2.x &&
+           bounds1.x < bounds2.x + bounds2.width &&
+           bounds1.y + bounds1.height > bounds2.y &&
+           bounds1.y < bounds2.y + bounds2.height;
+}
+
+function playSound(url) {
+    fetch(url)
+    .then(response => response.arrayBuffer())
+    .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+    .then(audioBuffer => {
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+        source.connect(audioContext.destination);
+        source.start();
+    });
+}
+
+// Level change functionality (you need to implement UI for this)
+function changeLevel(newLevel) {
+    level = newLevel;
+    document.getElementById('level').innerText = `Level: ${level}`;
+}
+</script>
+</body>
+</html>

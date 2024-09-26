@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Enhanced Side-Scrolling Bubble Shooter Game</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            overflow: hidden;
+            font-family: 'Orbitron', sans-serif;
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 1200px;
+            max-height: 800px;
+            background: linear-gradient(to right, #000428, #004e92);
+            box-shadow: 0 0 30px rgba(0, 78, 146, 0.7);
+        }
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+        }
+        #overlay, #gameOverScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+            box-shadow: 0 0 20px rgba(0, 78, 146, 0.5);
+        }
+        #overlay.hidden, #gameOverScreen.hidden {
+            display: none;
+        }
+        h1, h2 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #00bcd4;
+        }
+        p {
+            font-size: 24px;
+            margin-bottom: 30px;
+            text-shadow: 0 0 5px #00bcd4;
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        button {
+            padding: 15px 30px;
+            font-size: 20px;
+            font-family: 'Orbitron', sans-serif;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            background-color: #00bcd4;
+            color: #000;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 0 10px rgba(0, 188, 212, 0.7);
+        }
+        button:hover {
+            background-color: #fff;
+            color: #00bcd4;
+            transform: scale(1.05);
+        }
+        #scoreBoard {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            z-index: 5;
+            text-shadow: 0 0 5px #00bcd4;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 25px;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="overlay">
+            <h1>Bubble Shooter</h1>
+            <p>Select Difficulty:</p>
+            <div class="button-container">
+                <button onclick="startGame('Easy')">Easy</button>
+                <button onclick="startGame('Medium')">Medium</button>
+                <button onclick="startGame('Hard')">Hard</button>
+            </div>
+        </div>
+        <div id="scoreBoard">Score: 0 | Lives: 3</div>
+        <canvas id="gameCanvas"></canvas>
+        <div id="gameOverScreen" class="hidden">
+            <h2>Game Over</h2>
+            <p>Your Score: <span id="finalScore">0</span></p>
+            <button onclick="restartGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const gameContainer = document.getElementById('gameContainer');
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = gameContainer.clientWidth;
+            canvas.height = gameContainer.clientHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        let score = 0;
+        let lives = 3;
+        let level = 'Easy';
+        let gameOver = false;
+        let lastBubbleSpawn = 0;
+        let bubbleSpawnRate = 2000;
+        let bubbleSpeed = 2;
+        let animationId;
+        let lastFrameTime = 0;
+        let gameStartTime;
+        let lastScoreUpdateTime = 0;
+
+        const player = {
+            x: 100,
+            y: canvas.height / 2,
+            width: 60,
+            height: 60,
+            speed: 5,
+            color: '#00BCD4',
+            draw: function() {
+                // Draw Body
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.height / 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw Gun
+                ctx.fillStyle = '#555';
+                ctx.beginPath();
+                ctx.moveTo(this.x + 30, this.y - 10);
+                ctx.lineTo(this.x + 60, this.y - 5);
+                ctx.lineTo(this.x + 60, this.y + 5);
+                ctx.lineTo(this.x + 30, this.y + 10);
+                ctx.closePath();
+                ctx.fill();
+
+                // Draw Gun Details
+                ctx.fillStyle = '#333';
+                ctx.fillRect(this.x + 35, this.y - 8, 20, 16);
+                ctx.fillStyle = '#777';
+                ctx.beginPath();
+                ctx.arc(this.x + 45, this.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+            },
+            moveUp: function() {
+                if (this.y - this.height / 2 > 0) {
+                    this.y -= this.speed;
+                }
+            },
+            moveDown: function() {
+                if (this.y + this.height / 2 < canvas.height) {
+                    this.y += this.speed;
+                }
+            }
+        };
+
+        class Nail {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 20;
+                this.height = 6;
+                this.speed = 10;
+                this.color = '#FFEB3B';
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x + this.width, this.y);
+                ctx.lineTo(this.x + this.width + 5, this.y + this.height / 2);
+                ctx.lineTo(this.x + this.width, this.y + this.height);
+                ctx.lineTo(this.x, this.y + this.height);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            update() {
+                this.x += this.speed;
+            }
+        }
+
+        class Bubble {
+            constructor() {
+                this.radius = 25;
+                this.x = canvas.width + this.radius;
+                this.y = Math.random() * (canvas.height - 2 * this.radius) + this.radius;
+                this.speed = bubbleSpeed + Math.random();
+                this.angle = Math.random() * Math.PI * 2;
+                this.vx = Math.cos(this.angle) * this.speed;
+                this.vy = Math.sin(this.angle) * this.speed;
+                this.color = '#FF0000';
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.y - this.radius < 0 || this.y + this.radius > canvas.height) {
+                    this.vy *= -1;
+                }
+            }
+        }
+
+        const keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            if (e.code === 'Space') {
+                shootNail();
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+        canvas.addEventListener('mousedown', shootNail);
+
+        const nails = [];
+        const bubbles = [];
+
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioContext();
+
+        function playSound(type) {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            if (type === 'shoot') {
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime);
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.1);
+            } else if (type === 'hit') {
+                oscillator.type = 'triangle';
+                oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
+                gainNode.gain.setValueAtTime(0.03, audioCtx.currentTime);
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.2);
+            }
+        }
+
+        function shootNail() {
+            if (gameOver) return;
+            nails.push(new Nail(player.x + player.width / 2, player.y));
+            playSound('shoot');
+        }
+
+        function spawnBubble() {
+            bubbles.push(new Bubble());
+        }
+
+        function configureDifficulty(selectedLevel) {
+            switch(selectedLevel){
+                case 'Easy':
+                    bubbleSpawnRate = 2000;
+                    bubbleSpeed = 2;
+                    break;
+                case 'Medium':
+                    bubbleSpawnRate = 1500;
+                    bubbleSpeed = 3;
+                    break;
+                case 'Hard':
+                    bubbleSpawnRate = 1000;
+                    bubbleSpeed = 4;
+                    break;
+                default:
+                    bubbleSpawnRate = 2000;
+            }
+        }
+
+        const scoreBoard = document.getElementById('scoreBoard');
+        function updateScoreBoard() {
+            scoreBoard.textContent = `Score: ${Math.floor(score)} | Lives: ${lives}`;
+        }
+
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalScore = document.getElementById('finalScore');
+
+        function endGame() {
+            gameOver = true;
+            cancelAnimationFrame(animationId);
+            gameOverScreen.classList.remove('hidden');
+            finalScore.textContent = Math.floor(score);
+        }
+
+        function restartGame() {
+            score = 0;
+            lives = 3;
+            gameOver = false;
+            nails.length = 0;
+            bubbles.length = 0;
+            player.y = canvas.height / 2;
+            gameOverScreen.classList.add('hidden');
+            updateScoreBoard();
+            lastBubbleSpawn = performance.now();
+            lastFrameTime = performance.now();
+            gameStartTime = performance.now();
+            lastScoreUpdateTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame(selectedLevel) {
+            level = selectedLevel;
+            configureDifficulty(level);
+            document.getElementById('overlay').classList.add('hidden');
+            lastBubbleSpawn = performance.now();
+            lastFrameTime = performance.now();
+            gameStartTime = performance.now();
+            lastScoreUpdateTime = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.startGame = startGame;
+        window.restartGame = restartGame;
+
+        function gameLoop(timestamp) {
+            if (gameOver) return;
+
+            const deltaTime = timestamp - lastFrameTime;
+            lastFrameTime = timestamp;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (keys['ArrowUp']) {
+                player.moveUp();
+            }
+            if (keys['ArrowDown']) {
+                player.moveDown();
+            }
+
+            player.draw();
+
+            nails.forEach((nail, index) => {
+                nail.update();
+                nail.draw();
+                if (nail.x - nail.width > canvas.width) {
+                    nails.splice(index, 1);
+                }
+            });
+
+            if (timestamp - lastBubbleSpawn > bubbleSpawnRate) {
+                spawnBubble();
+                lastBubbleSpawn = timestamp;
+            }
+
+            bubbles.forEach((bubble, bIndex) => {
+                bubble.update();
+                bubble.draw();
+
+                const distPlayer = Math.hypot(bubble.x - player.x, bubble.y - player.y);
+                if (distPlayer < bubble.radius + player.height / 2) {
+                    bubbles.splice(bIndex, 1);
+                    playSound('hit');
+                    lives -= 1;
+                    updateScoreBoard();
+                    if (lives <= 0) {
+                        endGame();
+                    }
+                }
+
+                nails.forEach((nail, nailIndex) => {
+                    const dist = Math.hypot(bubble.x - nail.x, bubble.y - nail.y);
+                    if (dist < bubble.radius + nail.width / 2) {
+                        bubbles.splice(bIndex, 1);
+                        nails.splice(nailIndex, 1);
+                        playSound('hit');
+                        score += 1; // Add 1 point for each bubble shot
+                    }
+                });
+
+                if (bubble.x + bubble.radius < 0) {
+                    bubbles.splice(bIndex, 1);
+                }
+            });
+
+            // Update score for staying alive
+            const timeSinceLastUpdate = (timestamp - lastScoreUpdateTime) / 1000;
+            if (timeSinceLastUpdate >= 1) {
+                score += 5 * Math.floor(timeSinceLastUpdate); // Add 5 points for each second alive
+                lastScoreUpdateTime = timestamp;
+            }
+
+            updateScoreBoard();
+
+            animationId = requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>
