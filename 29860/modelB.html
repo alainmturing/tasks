@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electric Field Visualization</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        #canvas {
+            border: 1px solid #000;
+            background-color: #f8f9fa;
+            cursor: move;
+        }
+        .charge {
+            width: 20px;
+            height: 20px;
+            position: absolute;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+        }
+        .positive {
+            background-color: red;
+        }
+        .negative {
+            background-color: blue;
+        }
+        .field-line {
+            stroke: grey;
+            stroke-width: 1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container mt-4">
+    <h1 class="text-center">Electric Fields and Charges Explorer</h1>
+    
+    <!-- Introduction -->
+    <div class="alert alert-info">
+        <h4>Introduction to Electric Fields</h4>
+        <p>Electric fields are regions around charged particles where other charges experience a force. Positive charges create fields that repel other positive charges and attract negatives, while negative charges do the opposite. The field's strength decreases with distance from the charge.</p>
+    </div>
+
+    <!-- Instructions -->
+    <div class="alert alert-secondary">
+        <h4>How to Use</h4>
+        <ul>
+            <li>Drag charges to see how the field changes.</li>
+            <li>Use the buttons to add or remove charges.</li>
+            <li>Click 'Reset' to return to the initial state.</li>
+            <li>Toggle 'Show Field Lines' to view or hide the electric field lines.</li>
+            <li>Select any charge from the list to delete it individually.</li>
+        </ul>
+    </div>
+
+    <!-- Visualization Controls -->
+    <div class="mb-3">
+        <button class="btn btn-primary" onclick="addCharge('positive')">Add +</button>
+        <button class="btn btn-primary" onclick="addCharge('negative')">Add -</button>
+        <button class="btn btn-warning" onclick="resetField()">Reset</button>
+        <button class="btn btn-info" onclick="toggleFieldLines()">Toggle Field Lines</button>
+    </div>
+
+    <!-- Canvas for Electric Field -->
+    <svg id="canvas" width="800" height="400"></svg>
+    
+    <!-- List of Charges -->
+    <div class="mt-2">
+        <select id="chargeList" class="form-control" size="5"></select>
+    </div>
+</div>
+
+<footer class="footer mt-5 py-3 bg-light">
+    <div class="container text-center">
+        <span class="text-muted">&copy; Electric Fields and Charges Explorer</span>
+    </div>
+</footer>
+
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script>
+    const canvas = document.getElementById('canvas');
+    let charges = [{x: 100, y: 200, type: 'negative'}, {x: 700, y: 200, type: 'positive'}];
+    let showLines = true;
+
+    function drawField() {
+        canvas.innerHTML = ''; // Clear canvas
+        if (!showLines) return;
+
+        for (let x = 0; x < 800; x += 20) {
+            for (let y = 0; y < 400; y += 20) {
+                let Ex = 0, Ey = 0;
+                charges.forEach(charge => {
+                    let dx = x - charge.x;
+                    let dy = y - charge.y;
+                    let r = Math.sqrt(dx*dx + dy*dy);
+                    if (r > 10) {  // Avoid singularity at charge location
+                        let E = 1 / (r*r);  // Simplified for demonstration
+                        Ex += (charge.type === 'positive' ? 1 : -1) * E * dx / r;
+                        Ey += (charge.type === 'positive' ? 1 : -1) * E * dy / r;
+                    }
+                });
+                
+                let angle = Math.atan2(Ey, Ex);
+                let line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', x);
+                line.setAttribute('y1', y);
+                line.setAttribute('x2', x + 10 * Math.cos(angle));
+                line.setAttribute('y2', y + 10 * Math.sin(angle));
+                line.setAttribute('class', 'field-line');
+                canvas.appendChild(line);
+            }
+        }
+        charges.forEach(drawCharge);
+    }
+
+    function drawCharge(charge) {
+        let div = document.createElement('div');
+        div.className = `charge ${charge.type}`;
+        div.textContent = charge.type === 'positive' ? '+' : '-';
+        div.style.left = (charge.x - 10) + 'px';
+        div.style.top = (charge.y - 10) + 'px';
+        div.onmousedown = function(event) {
+            dragElement(div, charge);
+        };
+        canvas.appendChild(div);
+    }
+
+    function dragElement(elmnt, charge) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        elmnt.onmousedown = dragMouseDown;
+
+        function dragMouseDown(e) {
+            e = e || window.event;
+            e.preventDefault();
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            e = e || window.event;
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            charge.x = elmnt.offsetLeft - pos1;
+            charge.y = elmnt.offsetTop - pos2;
+            elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+            elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+            drawField();
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
+    }
+
+    function addCharge(type) {
+        let x = Math.random() * 700 + 50; // Random within canvas
+        let y = Math.random() * 300 + 50;
+        charges.push({x, y, type});
+        updateChargeList();
+        drawField();
+    }
+
+    function resetField() {
+        charges = [{x: 100, y: 200, type: 'negative'}, {x: 700, y: 200, type: 'positive'}];
+        updateChargeList();
+        drawField();
+    }
+
+    function toggleFieldLines() {
+        showLines = !showLines;
+        drawField();
+    }
+
+    function updateChargeList() {
+        const list = document.getElementById('chargeList');
+        list.innerHTML = '';
+        charges.forEach((charge, index) => {
+            let option = document.createElement('option');
+            option.text = `${charge.type === 'positive' ? '+' : '-'} at (${Math.round(charge.x)}, ${Math.round(charge.y)})`;
+            option.value = index;
+            list.add(option);
+        });
+        list.onchange = function() {
+            if(this.value !== '') {
+                charges.splice(this.value, 1);
+                updateChargeList();
+                drawField();
+            }
+        };
+    }
+
+    // Initial draw
+    drawField();
+    updateChargeList();
+</script>
+
+</body>
+</html>

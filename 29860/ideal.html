@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electric Fields and Charges Explorer</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Math.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.min.js"></script>
+    <!-- Custom CSS -->
+    <style>
+        body {
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+        header, footer {
+            width: 100%;
+            padding: 20px 0;
+            background-color: #007bff;
+            color: white;
+            text-align: center;
+        }
+        header {
+            margin-bottom: 20px;
+        }
+        footer {
+            margin-top: 20px;
+        }
+        .main-content {
+            padding: 20px;
+        }
+        #controls {
+            margin-bottom: 20px;
+        }
+        .charge {
+            cursor: move;
+            font-size: 24px;
+            user-select: none;
+        }
+        .positive {
+            fill: red;
+            stroke: red;
+        }
+        .negative {
+            fill: blue;
+            stroke: blue;
+        }
+        #charge-sliders {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        svg {
+            border: 1px solid #dee2e6;
+            background-color: #ffffff;
+        }
+        .arrow {
+            stroke: green;
+            stroke-width: 1;
+            marker-end: url(#arrowhead);
+        }
+        .slider-container {
+            background-color: #f1f3f5;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .slider-container .form-range {
+            width: 70%;
+        }
+        .delete-charge {
+            float: right;
+        }
+        .info-container {
+            background-color: #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .info-container h2 {
+            color: #007bff;
+            margin-bottom: 15px;
+        }
+        .info-container p {
+            color: #495057;
+            line-height: 1.6;
+        }
+        .controls-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <h1>Electric Fields and Charges Explorer</h1>
+        </div>
+    </header>
+
+    <div class="container main-content">
+        <section id="instructions" class="mb-4 info-container">
+            <h2>Introduction to Electric Fields and Charges</h2>
+            <p>
+                Electric fields are fascinating regions surrounding electric charges where other charges experience forces.
+                The strength of these fields is directly proportional to the magnitude of the charge and inversely
+                proportional to the square of the distance from the charge. Visualize positive charges as creators of
+                outward-radiating field lines, while negative charges form converging lines. By exploring multiple
+                charges, you'll discover how electric fields combine to create intricate patterns in space.
+            </p>
+            <p>
+                This interactive tool allows you to dive deep into the world of electromagnetism. Experiment with
+                various charge configurations and witness the dynamic nature of electric fields firsthand.
+            </p>
+        </section>
+
+        <section id="controls-instructions" class="mb-4 info-container controls-info">
+            <h2>How to Use the Controls</h2>
+            <p>
+                1. Add charges: Use the "Add Positive Charge" and "Add Negative Charge" buttons to place new charges on the field.
+            </p>
+            <p>
+                2. Adjust magnitude: Each charge has a slider to control its strength. Move the slider to see how it affects the field.
+            </p>
+            <p>
+                3. Move charges: Click and drag charges to reposition them and observe changes in the field.
+            </p>
+            <p>
+                4. Toggle field lines: Use the "Hide/Show Field Lines" button to visualize or hide the electric field vectors.
+            </p>
+            <p>
+                5. Reset: Click "Reset" to clear all charges and start over with the initial configuration.
+            </p>
+            <p>
+                Experiment freely and observe how the electric field responds to your manipulations!
+            </p>
+        </section>
+
+        <div class="row">
+            <div class="col-md-4">
+                <section id="controls">
+                    <div class="mb-3">
+                        <button id="add-positive" class="btn btn-danger me-2">Add Positive Charge</button>
+                        <button id="add-negative" class="btn btn-primary me-2">Add Negative Charge</button>
+                    </div>
+                    <div class="mb-3">
+                        <button id="reset" class="btn btn-secondary me-2">Reset</button>
+                        <button id="toggle-field" class="btn btn-success">Hide Field Lines</button>
+                    </div>
+                    <div id="charge-sliders">
+                        <!-- Sliders for charge magnitudes will be appended here -->
+                    </div>
+                </section>
+            </div>
+            <div class="col-md-8">
+                <section id="visualization">
+                    <svg id="field-canvas" width="800" height="600">
+                        <!-- Define arrowhead marker -->
+                        <defs>
+                            <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                                    refX="0" refY="3.5" orient="auto">
+                                <polygon points="0 0, 10 3.5, 0 7" />
+                            </marker>
+                        </defs>
+                        <!-- Field vectors will be drawn here -->
+                    </svg>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Electric Fields and Charges Explorer</p>
+        </div>
+    </footer>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JavaScript -->
+    <script>
+        $(document).ready(function() {
+            let charges = [];
+            let fieldVisible = true;
+            let chargeId = 0;
+
+            const svg = $('#field-canvas');
+            const svgWidth = svg.attr('width');
+            const svgHeight = svg.attr('height');
+
+            // Define grid spacing for field vectors
+            const gridSpacing = 50;
+            const vectorLength = 20; // Length of the field vector arrows
+
+            // Function to add a charge
+            function addCharge(type, x, y) {
+                const newCharge = {
+                    id: chargeId,
+                    type: type,
+                    magnitude: 1, // Arbitrary units
+                    x: x || svgWidth / 2,
+                    y: y || svgHeight / 2
+                };
+                charges.push(newCharge);
+                createChargeElement(newCharge);
+                createSlider(newCharge);
+                chargeId++;
+                updateField();
+            }
+
+            // Function to create charge SVG element
+            function createChargeElement(charge) {
+                const chargeElem = $(document.createElementNS("http://www.w3.org/2000/svg", "circle"))
+                    .attr('id', 'charge-' + charge.id)
+                    .attr('cx', charge.x)
+                    .attr('cy', charge.y)
+                    .attr('r', 15)
+                    .addClass(charge.type === 'positive' ? 'positive' : 'negative')
+                    .appendTo(svg);
+
+                const chargeLabel = $(document.createElementNS("http://www.w3.org/2000/svg", "text"))
+                    .attr('id', 'charge-label-' + charge.id)
+                    .attr('x', charge.x)
+                    .attr('y', charge.y + 5)
+                    .attr('text-anchor', 'middle')
+                    .attr('pointer-events', 'none')
+                    .attr('font-size', '20px')
+                    .attr('fill', 'white')
+                    .text(charge.type === 'positive' ? '+' : '−')
+                    .appendTo(svg);
+
+                // Make the charge draggable
+                let isDragging = false;
+
+                chargeElem.on('mousedown touchstart', function(e) {
+                    e.preventDefault();
+                    isDragging = true;
+                    const svgOffset = svg.offset();
+                    const startX = (e.pageX || e.originalEvent.touches[0].pageX) - svgOffset.left;
+                    const startY = (e.pageY || e.originalEvent.touches[0].pageY) - svgOffset.top;
+                    const origX = charge.x;
+                    const origY = charge.y;
+
+                    $(document).on('mousemove.drag touchmove.drag', function(eMove) {
+                        if (!isDragging) return;
+                        const moveX = (eMove.pageX || eMove.originalEvent.touches[0].pageX) - svgOffset.left;
+                        const moveY = (eMove.pageY || eMove.originalEvent.touches[0].pageY) - svgOffset.top;
+                        charge.x = moveX;
+                        charge.y = moveY;
+                        chargeElem.attr('cx', moveX).attr('cy', moveY);
+                        chargeLabel.attr('x', moveX).attr('y', moveY + 5);
+                        updateField();
+                    });
+
+                });
+
+                $(document).on('mouseup touchend', function() {
+                    if (isDragging) {
+                        isDragging = false;
+                        $(document).off('mousemove.drag touchmove.drag');
+                    }
+                });
+            }
+
+            // Function to create slider for charge magnitude
+            function createSlider(charge) {
+                const sliderContainer = $('<div class="slider-container"></div>');
+                const label = $('<label class="form-label"></label>')
+                    .attr('for', 'slider-' + charge.id)
+                    .text(`Charge ${charge.id + 1} (${charge.type.charAt(0).toUpperCase() + charge.type.slice(1)}): `);
+                const slider = $('<input type="range" min="1" max="10" value="1" class="form-range">')
+                    .attr('id', 'slider-' + charge.id)
+                    .on('input', function() {
+                        const value = parseFloat($(this).val());
+                        const ch = charges.find(c => c.id === charge.id);
+                        if (ch) {
+                            ch.magnitude = value;
+                            updateField();
+                        }
+                    });
+                const valueDisplay = $('<span class="ms-2"></span>').attr('id', 'value-' + charge.id).text('1');
+                slider.on('input', function() {
+                    $('#value-' + charge.id).text($(this).val());
+                });
+                const deleteButton = $('<button class="btn btn-sm btn-danger delete-charge">Delete</button>')
+                    .click(function() {
+                        deleteCharge(charge.id);
+                    });
+                sliderContainer.append(label).append(slider).append(valueDisplay).append(deleteButton);
+                $('#charge-sliders').append(sliderContainer);
+            }
+
+            // Function to delete a charge
+            function deleteCharge(id) {
+                charges = charges.filter(c => c.id !== id);
+                $(`#charge-${id}, #charge-label-${id}`).remove();
+                $(`#slider-${id}`).closest('.slider-container').remove();
+                updateField();
+            }
+
+            // Function to reset all charges
+            function resetCharges() {
+                charges = [];
+                chargeId = 0;
+                svg.find('.positive, .negative').remove();
+                svg.find('text[id^="charge-label-"]').remove();
+                svg.find('.arrow').remove();
+                $('#charge-sliders').empty();
+                // Add initial charges
+                addCharge('positive', svgWidth * 0.75, svgHeight / 2);
+                addCharge('negative', svgWidth * 0.25, svgHeight / 2);
+            }
+
+            // Function to toggle field vectors visibility
+            function toggleField() {
+                fieldVisible = !fieldVisible;
+                $('#toggle-field').text(fieldVisible ? 'Hide Field Lines' : 'Show Field Lines');
+                if (fieldVisible) {
+                    updateField();
+                } else {
+                    svg.find('.arrow').remove();
+                }
+            }
+
+            // Function to calculate electric field at a point due to all charges
+            function calculateElectricField(x, y) {
+                let E = math.complex(0, 0);
+                charges.forEach(charge => {
+                    const dx = x - charge.x;
+                    const dy = y - charge.y;
+                    const distanceSquared = dx * dx + dy * dy;
+                    const distance = Math.sqrt(distanceSquared);
+                    if (distance < 10) return; // Avoid singularity
+                    const magnitude = charge.magnitude / distanceSquared;
+                    const theta = Math.atan2(dy, dx);
+                    const Ex = magnitude * Math.cos(theta);
+                    const Ey = magnitude * Math.sin(theta);
+                    E = math.add(E, math.complex(Ex, Ey));
+                });
+                return E;
+            }
+
+            // Function to update the electric field visualization
+            function updateField() {
+                if (!fieldVisible) return;
+                svg.find('.arrow').remove();
+
+                for (let x = gridSpacing; x < svgWidth; x += gridSpacing) {
+                    for (let y = gridSpacing; y < svgHeight; y += gridSpacing) {
+                        const E = calculateElectricField(x, y);
+                        const Ex = math.re(E);
+                        const Ey = math.im(E);
+                        const E_magnitude = Math.sqrt(Ex * Ex + Ey * Ey);
+                        if (E_magnitude === 0) continue;
+                        const normalizedEx = Ex / E_magnitude;
+                        const normalizedEy = Ey / E_magnitude;
+                        const endX = x + normalizedEx * vectorLength;
+                        const endY = y + normalizedEy * vectorLength;
+
+                        const arrow = $(document.createElementNS("http://www.w3.org/2000/svg", "line"))
+                            .attr('x1', x)
+                            .attr('y1', y)
+                            .attr('x2', endX)
+                            .attr('y2', endY)
+                            .attr('stroke', 'green')
+                            .attr('stroke-width', 1)
+                            .attr('class', 'arrow')
+                            .appendTo(svg);
+                    }
+                }
+            }
+
+            // Event listeners
+            $('#add-positive').click(function() {
+                addCharge('positive');
+            });
+
+            $('#add-negative').click(function() {
+                addCharge('negative');
+            });
+
+            $('#reset').click(function() {
+                resetCharges();
+            });
+
+            $('#toggle-field').click(function() {
+                toggleField();
+            });
+
+            // Initial state
+            resetCharges(); // This will add the initial positive and negative charges
+        });
+    </script>
+</body>
+</html>
