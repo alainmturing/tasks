@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The Jumping Square</title>
+<style>
+body { margin: 0; overflow: hidden; font-family: 'Arial', sans-serif; background: #87CEEB; }
+#gameCanvas { display: block; background: transparent; }
+#levelSelect, #instructions, #score, #gameOver {
+    position: absolute; 
+    text-align: center; 
+    color: white; 
+    background: rgba(0,0,0,0.7); 
+    padding: 10px; 
+    border-radius: 10px;
+}
+#levelSelect { top: 50%; left: 50%; transform: translate(-50%, -50%); }
+#instructions { top: 10px; left: 10px; }
+#score { top: 10px; left: 50%; transform: translateX(-50%); }
+#gameOver { top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; }
+button { margin: 5px; padding: 10px 20px; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas" width="800" height="400"></canvas>
+<div id="levelSelect">
+    <h2>Select Level</h2>
+    <button onclick="startGame('easy')">Easy</button>
+    <button onclick="startGame('medium')">Medium</button>
+    <button onclick="startGame('hard')">Hard</button>
+</div>
+<div id="instructions">
+    <h3>Instructions</h3>
+    <p>Press <strong>Space</strong> or <strong>Click</strong> to jump!</p>
+</div>
+<div id="score">Score: <span id="scoreValue">0</span></div>
+<div id="gameOver">
+    <h2>Game Over</h2>
+    <p>Your Score: <span id="finalScore"></span></p>
+    <button onclick="location.reload()">Restart</button>
+    <button onclick="document.getElementById('levelSelect').style.display='block';document.getElementById('gameOver').style.display='none';">Level Select</button>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+// Sound effects
+function playSound(buffer, time = 0) {
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    source.start(time);
+}
+
+let jumpBuffer, collisionBuffer;
+
+// Load sounds
+function loadSound(url, callback) {
+    fetch(url)
+    .then(response => response.arrayBuffer())
+    .then(buffer => audioContext.decodeAudioData(buffer, callback));
+}
+
+loadSound('jump.wav', buffer => jumpBuffer = buffer);
+loadSound('collision.wav', buffer => collisionBuffer = buffer);
+
+const player = { x: 50, y: 300, size: 30, dy: 0, jumpStrength: -10, gravity: 0.5 };
+let obstacles = [];
+let gameSpeed = 3;
+let score = 0;
+let gameRunning = false;
+let level = '';
+
+function startGame(selectedLevel) {
+    level = selectedLevel;
+    switch(level) {
+        case 'easy': gameSpeed = 2; break;
+        case 'medium': gameSpeed = 3; break;
+        case 'hard': gameSpeed = 4; break;
+    }
+    document.getElementById('levelSelect').style.display = 'none';
+    gameRunning = true;
+    obstacles = [];
+    score = 0;
+    player.y = 300;
+    player.dy = 0;
+    requestAnimationFrame(gameLoop);
+}
+
+function createObstacle() {
+    const size = 30 + Math.random() * 30;
+    obstacles.push({ x: canvas.width, y: canvas.height - size, width: 20, height: size });
+}
+
+function gameLoop() {
+    if(!gameRunning) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Parallax background
+    for(let i = 0; i < 3; i++) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.1 * i})`;
+        ctx.fillRect(i * 300 - (score * 0.5 * i) % 300, 0, 300, canvas.height);
+    }
+
+    // Update and draw player
+    player.dy += player.gravity;
+    player.y += player.dy;
+    if(player.y + player.size > canvas.height) {
+        player.y = canvas.height - player.size;
+        player.dy = 0;
+    }
+    ctx.fillStyle = "red";
+    ctx.fillRect(player.x, player.y, player.size, player.size);
+
+    // Obstacles
+    ctx.fillStyle = "green";
+    obstacles.forEach((obstacle, index) => {
+        obstacle.x -= gameSpeed;
+        ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+        if(obstacle.x + obstacle.width < 0) {
+            obstacles.splice(index, 1);
+            score++;
+            document.getElementById('scoreValue').textContent = score;
+        }
+
+        // Collision check
+        if(player.x < obstacle.x + obstacle.width &&
+           player.x + player.size > obstacle.x &&
+           player.y + player.size > obstacle.y) {
+            playSound(collisionBuffer);
+            gameOver();
+        }
+    });
+
+    // Create new obstacles
+    if(obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 300) {
+        createObstacle();
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+
+function gameOver() {
+    gameRunning = false;
+    document.getElementById('gameOver').style.display = 'block';
+    document.getElementById('finalScore').textContent = score;
+}
+
+document.addEventListener('keydown', (e) => {
+    if(e.code === 'Space' && player.dy === 0) {
+        player.dy = player.jumpStrength;
+        playSound(jumpBuffer);
+    }
+});
+
+canvas.addEventListener('click', () => {
+    if(player.dy === 0) {
+        player.dy = player.jumpStrength;
+        playSound(jumpBuffer);
+    }
+});
+</script>
+</body>
+</html>

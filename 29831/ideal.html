@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>The Jumping Square</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background-color: #87CEEB; /* Sky blue background */
+        }
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(to bottom, #87CEEB 0%, #FFFFFF 100%);
+        }
+        #instructions {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            max-width: 200px;
+        }
+        #instructions h3 {
+            margin: 0 0 5px 0;
+            font-size: 16px;
+            color: #333;
+        }
+        #instructions p {
+            margin: 0;
+            font-size: 14px;
+            color: #555;
+        }
+        #levelSelection, #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.9);
+            padding: 20px 30px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 0 15px rgba(0,0,0,0.4);
+        }
+        #levelSelection h2, #gameOver h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .levelButton, #restartButton, #levelSelectButton {
+            display: block;
+            width: 100%;
+            padding: 10px 0;
+            margin: 10px 0;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .levelButton:hover, #restartButton:hover, #levelSelectButton:hover {
+            background-color: #45a049;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.8);
+            padding: 5px 10px;
+            border-radius: 8px;
+            font-size: 18px;
+            color: #333;
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="instructions">
+        <h3>Instructions</h3>
+        <p>Navigate the jumping square through obstacles.</p>
+        <p><strong>Controls:</strong></p>
+        <p>Press <strong>Spacebar</strong> or <strong>Click</strong> to jump.</p>
+    </div>
+
+    <div id="levelSelection">
+        <h2>Select Level</h2>
+        <button class="levelButton" data-level="Easy">Easy</button>
+        <button class="levelButton" data-level="Medium">Medium</button>
+        <button class="levelButton" data-level="Hard">Hard</button>
+    </div>
+
+    <div id="gameOver" style="display: none;">
+        <h2>Game Over</h2>
+        <p id="finalScore">Your Score: 0</p>
+        <button id="restartButton">Restart</button>
+        <button id="levelSelectButton">Level Selection</button>
+    </div>
+
+    <div id="score" style="display: none;">
+        Score: 0
+    </div>
+
+    <script>
+        // Get elements
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const levelSelection = document.getElementById('levelSelection');
+        const gameOverScreen = document.getElementById('gameOver');
+        const finalScoreText = document.getElementById('finalScore');
+        const restartButton = document.getElementById('restartButton');
+        const levelSelectButton = document.getElementById('levelSelectButton');
+        const scoreDisplay = document.getElementById('score');
+
+        // Resize canvas to full window
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Game variables
+        let gameState = 'levelSelection'; // 'playing', 'gameOver'
+        let level = 'Easy';
+        let gameSpeed = 3;
+        let obstacleFrequency = 1500; // milliseconds
+        let lastObstacleTime = 0;
+        let obstacles = [];
+        let player;
+        let score = 0;
+        let startTime;
+        let animationId;
+        let backgroundLayers = [];
+        let jumpSound, collisionSound;
+
+        // Initialize sounds
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioContext();
+
+        function createSound(frequency, type, duration) {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.type = type;
+            oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.start();
+
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+            oscillator.stop(audioCtx.currentTime + duration);
+        }
+
+        function playJumpSound() {
+            createSound(600, 'square', 0.1);
+        }
+
+        function playCollisionSound() {
+            createSound(200, 'sawtooth', 0.2);
+        }
+
+        // Player class
+        class Player {
+            constructor() {
+                this.size = 50;
+                this.x = 100;
+                this.y = canvas.height - this.size - 100; // Ground level
+                this.vy = 0;
+                this.gravity = 0.6;
+                this.jumpStrength = -15;
+                this.isJumping = false;
+            }
+
+            jump() {
+                if (!this.isJumping) {
+                    this.vy = this.jumpStrength;
+                    this.isJumping = true;
+                    playJumpSound();
+                }
+            }
+
+            update() {
+                this.vy += this.gravity;
+                this.y += this.vy;
+
+                if (this.y >= canvas.height - this.size - 100) {
+                    this.y = canvas.height - this.size - 100;
+                    this.vy = 0;
+                    this.isJumping = false;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = '#FF5722'; // Orange square
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+            }
+        }
+
+        // Obstacle class
+        class Obstacle {
+            constructor() {
+                this.width = 30;
+                this.height = 50;
+                this.x = canvas.width;
+                this.y = canvas.height - this.height - 100;
+                this.speed = gameSpeed;
+            }
+
+            update() {
+                this.x -= this.speed;
+            }
+
+            draw() {
+                ctx.fillStyle = '#4CAF50'; // Green obstacles
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        // Background Layer class for parallax
+        class BackgroundLayer {
+            constructor(image, speedModifier) {
+                this.image = image;
+                this.speedModifier = speedModifier;
+                this.x = 0;
+                this.y = 0;
+                this.width = canvas.width;
+                this.height = canvas.height;
+            }
+
+            update(speed) {
+                this.x -= speed * this.speedModifier;
+                if (this.x <= -this.width) {
+                    this.x = 0;
+                }
+            }
+
+            draw() {
+                ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+                ctx.drawImage(this.image, this.x + this.width, this.y, this.width, this.height);
+            }
+        }
+
+        // Initialize background layers (clouds and buildings with gradient)
+        function initBackground() {
+            backgroundLayers = [];
+
+            // Layer 1 - Farthest (light clouds)
+            const layer1 = document.createElement('canvas');
+            layer1.width = canvas.width;
+            layer1.height = canvas.height;
+            const ctx1 = layer1.getContext('2d');
+            ctx1.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            for (let i = 0; i < 20; i++) {
+                ctx1.beginPath();
+                ctx1.arc(Math.random() * canvas.width, Math.random() * canvas.height / 2, Math.random() * 20 + 10, 0, Math.PI * 2);
+                ctx1.fill();
+            }
+            backgroundLayers.push(new BackgroundLayer(layer1, 0.2));
+
+            // Layer 2 - Closer (Buildings with gradient)
+            const layer2 = document.createElement('canvas');
+            layer2.width = canvas.width;
+            layer2.height = canvas.height;
+            const ctx2 = layer2.getContext('2d');
+
+            // Create a gradient for buildings
+            const gradient = ctx2.createLinearGradient(0, canvas.height - 100, 0, canvas.height - 300);
+            gradient.addColorStop(0, '#2c3e50'); // Dark blue
+            gradient.addColorStop(1, '#34495e'); // Lighter blue
+
+            ctx2.fillStyle = gradient;
+            const buildingWidth = 60;
+            const buildingSpacing = 20;
+            for (let i = 0; i < canvas.width / (buildingWidth + buildingSpacing) + 2; i++) {
+                const buildingHeight = Math.random() * 150 + 150;
+                ctx2.fillRect(
+                    i * (buildingWidth + buildingSpacing),
+                    canvas.height - buildingHeight - 100,
+                    buildingWidth,
+                    buildingHeight
+                );
+            }
+            backgroundLayers.push(new BackgroundLayer(layer2, 0.5));
+        }
+
+        // Start game
+        function startGame(selectedLevel) {
+            level = selectedLevel;
+            setLevelSettings();
+            gameState = 'playing';
+            levelSelection.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            scoreDisplay.style.display = 'block';
+            score = 0;
+            obstacles = [];
+            player = new Player();
+            lastObstacleTime = Date.now();
+            startTime = Date.now();
+            initBackground();
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        // Set level settings based on selection
+        function setLevelSettings() {
+            switch(level) {
+                case 'Easy':
+                    gameSpeed = 3;
+                    obstacleFrequency = 1500;
+                    break;
+                case 'Medium':
+                    gameSpeed = 5;
+                    obstacleFrequency = 1000;
+                    break;
+                case 'Hard':
+                    gameSpeed = 7;
+                    obstacleFrequency = 700;
+                    break;
+                default:
+                    gameSpeed = 3;
+                    obstacleFrequency = 1500;
+            }
+        }
+
+        // Game loop
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Update and draw background
+            backgroundLayers.forEach(layer => {
+                layer.update(gameSpeed);
+                layer.draw();
+            });
+
+            // Update and draw player
+            player.update();
+            player.draw();
+
+            // Handle obstacles
+            const currentTime = Date.now();
+            if (currentTime - lastObstacleTime > obstacleFrequency) {
+                obstacles.push(new Obstacle());
+                lastObstacleTime = currentTime;
+            }
+
+            obstacles.forEach((obstacle, index) => {
+                obstacle.update();
+                obstacle.draw();
+
+                // Collision detection
+                if (player.x < obstacle.x + obstacle.width &&
+                    player.x + player.size > obstacle.x &&
+                    player.y < obstacle.y + obstacle.height &&
+                    player.y + player.size > obstacle.y) {
+                        endGame();
+                }
+
+                // Remove off-screen obstacles
+                if (obstacle.x + obstacle.width < 0) {
+                    obstacles.splice(index, 1);
+                }
+            });
+
+            // Update score
+            score = Math.floor((currentTime - startTime) / 10);
+            scoreDisplay.textContent = `Score: ${score}`;
+
+            // Continue the loop
+            if (gameState === 'playing') {
+                animationId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // End game
+        function endGame() {
+            gameState = 'gameOver';
+            cancelAnimationFrame(animationId);
+            scoreDisplay.style.display = 'none';
+            finalScoreText.textContent = `Your Score: ${score}`;
+            gameOverScreen.style.display = 'block';
+            playCollisionSound();
+        }
+
+        // Restart game
+        restartButton.addEventListener('click', () => {
+            startGame(level);
+        });
+
+        // Level selection from Game Over Screen
+        levelSelectButton.addEventListener('click', () => {
+            gameOverScreen.style.display = 'none';
+            levelSelection.style.display = 'block';
+        });
+
+        // Level selection
+        document.querySelectorAll('.levelButton').forEach(button => {
+            button.addEventListener('click', () => {
+                const selectedLevel = button.getAttribute('data-level');
+                startGame(selectedLevel);
+            });
+        });
+
+        // Controls
+        function handleJump() {
+            if (gameState === 'playing') {
+                player.jump();
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                handleJump();
+            }
+        });
+
+        window.addEventListener('mousedown', () => {
+            handleJump();
+        });
+
+        // Prevent scrolling with spacebar
+        window.addEventListener('keydown', function(e) {
+            if(e.code === 'Space' && e.target === document.body) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

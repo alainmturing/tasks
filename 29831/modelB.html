@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The Jumping Square</title>
+<style>
+    body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+    #gameCanvas { background: #87CEEB; display: block; }
+    #instructions { position: absolute; top: 10px; left: 10px; background: rgba(255, 255, 255, 0.7); padding: 10px; border-radius: 5px; }
+    #score { position: absolute; top: 10px; width: 100%; text-align: center; color: white; font-size: 24px; }
+    #levelSelect { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+    .levelBtn { margin: 10px; padding: 10px; font-size: 18px; cursor: pointer; }
+    .parallax { position: absolute; width: 100%; height: 100%; background-position: center; background-repeat: repeat-x; }
+    .layer1 { background-image: url('path_to_clouds.png'); }
+    .layer2 { background-image: url('path_to_hills.png'); }
+</style>
+</head>
+<body>
+<div id="levelSelect">
+    <button class="levelBtn" onclick="startGame('easy')">Easy</button>
+    <button class="levelBtn" onclick="startGame('medium')">Medium</button>
+    <button class="levelBtn" onclick="startGame('hard')">Hard</button>
+</div>
+<canvas id="gameCanvas"></canvas>
+<div id="instructions">Press Space or Click to Jump</div>
+<div id="score">Distance: 0m</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    // Audio setup
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(buffer, time = 0) {
+        const source = audioCtx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioCtx.destination);
+        source.start(time);
+    }
+
+    // Game variables
+    let gameLoop, player, obstacles = [], score = 0, gameSpeed, jumpSound, collisionSound, currentLevel;
+
+    // Load sounds
+    Promise.all([
+        fetch('jump.wav').then(response => response.arrayBuffer()).then(buffer => audioCtx.decodeAudioData(buffer)),
+        fetch('collision.wav').then(response => response.arrayBuffer()).then(buffer => audioCtx.decodeAudioData(buffer))
+    ]).then(buffers => {
+        jumpSound = buffers[0];
+        collisionSound = buffers[1];
+    });
+
+    function startGame(level) {
+        document.getElementById('levelSelect').style.display = 'none';
+        currentLevel = level;
+        gameSpeed = {easy: 3, medium: 5, hard: 7}[level];
+        player = {x: 50, y: canvas.height - 50, width: 40, height: 40, dy: 0};
+        obstacles = [];
+        score = 0;
+        gameLoop = setInterval(updateGameArea, 20);
+        window.addEventListener('keydown', jump);
+        canvas.addEventListener('click', jump);
+    }
+
+    function jump(e) {
+        if (e.code === 'Space' || e.type === 'click') {
+            if (player.dy === 0) {
+                player.dy = -10;
+                playSound(jumpSound);
+            }
+        }
+    }
+
+    function updateGameArea() {
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Update and draw player
+        player.y += player.dy;
+        player.dy += 0.5; // Gravity
+        if (player.y > canvas.height - player.height) {
+            player.y = canvas.height - player.height;
+            player.dy = 0;
+        }
+        ctx.fillStyle = 'red';
+        ctx.fillRect(player.x, player.y, player.width, player.height);
+
+        // Obstacles
+        if (Math.random() < 0.02) obstacles.push({x: canvas.width, width: 30, height: 50});
+        obstacles.forEach((obstacle, index) => {
+            obstacle.x -= gameSpeed;
+            ctx.fillStyle = 'green';
+            ctx.fillRect(obstacle.x, canvas.height - obstacle.height, obstacle.width, obstacle.height);
+            if (obstacle.x < -obstacle.width) obstacles.splice(index, 1);
+            if (collision(player, obstacle)) {
+                playSound(collisionSound);
+                clearInterval(gameLoop);
+                alert('Game Over! Your score: ' + score);
+                document.getElementById('levelSelect').style.display = 'block';
+            }
+        });
+
+        // Score
+        score += 0.1;
+        document.getElementById('score').innerText = `Distance: ${Math.floor(score)}m`;
+    }
+
+    function collision(a, b) {
+        return a.x < b.x + b.width &&
+               a.x + a.width > b.x &&
+               a.y < b.y + b.height &&
+               a.y + a.height > b.y;
+    }
+</script>
+</body>
+</html>
