@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Kinematics Learning Tool</title>
+    <!-- Bootstrap CSS via CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Chart.js via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            padding-top: 60px;
+            background-color: #f8f9fa;
+        }
+        .section {
+            display: none;
+            padding: 40px 0;
+        }
+        .section.active {
+            display: block;
+        }
+        .nav-link.active {
+            font-weight: bold;
+            color: #0d6efd !important;
+            border-bottom: 2px solid #0d6efd;
+        }
+        .optional {
+            color: #6c757d;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .optional-content {
+            display: none;
+            margin-top: 20px;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
+        }
+        .hint {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Kinematics Tool</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div  class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto" id="navbarTabs">
+                    <li class="nav-item"><a class="nav-link active" href="#intro">Introduction</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#one-d">1D Motion</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#graphs">Motion Graphs</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#interactive">Interactive Exercises</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Introduction Section -->
+    <section id="intro" class="section active container">
+        <h2>Introduction to Kinematics</h2>
+        <p>Kinematics is the branch of mechanics that describes the motion of objects without considering the causes of motion. It involves concepts such as displacement, velocity, and acceleration.</p>
+        <h4>Key Terms:</h4>
+        <ul>
+            <li><strong>Displacement:</strong> The change in position of an object.</li>
+            <li><strong>Velocity:</strong> The rate of change of displacement.</li>
+            <li><strong>Acceleration:</strong> The rate of change of velocity.</li>
+        </ul>
+        <p>Understanding these concepts is essential for analyzing how objects move in various situations.</p>
+    </section>
+
+    <!-- One-Dimensional Motion Section -->
+    <section id="one-d" class="section container">
+        <h2>One-Dimensional Motion</h2>
+        <p>One-dimensional motion refers to movement along a straight line, such as a car moving along a straight road.</p>
+        <h4>Equations of Motion:</h4>
+        <ul>
+            <li><strong>Displacement:</strong> Δx = x<sub>f</sub> - x<sub>i</sub></li>
+            <li><strong>Velocity:</strong> v = Δx / Δt</li>
+            <li><strong>Acceleration:</strong> a = Δv / Δt</li>
+            <li><strong>Final Velocity:</strong> v<sub>f</sub> = v<sub>i</sub> + aΔt</li>
+            <li><strong>Displacement with Constant Acceleration:</strong> Δx = v<sub>i</sub>Δt + ½a(Δt)<sup>2</sup></li>
+        </ul>
+        <h4>Real-World Example:</h4>
+        <p>Imagine a car accelerating from rest. We can use the equations above to determine its velocity and position at any given time.</p>
+        <div class="chart-container">
+            <canvas id="velocityChart"></canvas>
+        </div>
+        <hr>
+        <h4>Customize the Velocity-Time Graph:</h4>
+        <form id="velocityChartForm" class="row g-3">
+            <div class="col-md-4">
+                <label for="accelerationInput" class="form-label">Acceleration (m/s²):</label>
+                <input type="number" class="form-control" id="accelerationInput" value="2" step="any" required>
+            </div>
+            <div class="col-md-4">
+                <label for="timeInput" class="form-label">Time Range (s):</label>
+                <input type="number" class="form-control" id="timeInput" value="10" min="1" step="1" required>
+            </div>
+            <div class="col-md-4 align-self-end">
+                <button type="submit" class="btn btn-primary">Plot Graph</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- Motion Graphs Section -->
+    <section id="graphs" class="section container">
+        <h2>Motion Graphs</h2>
+        <p>Graphs are powerful tools to visualize motion. Let's explore displacement-time and acceleration-time graphs.</p>
+        <hr>
+        <h4>Displacement-Time Graph:</h4>
+        <div class="chart-container">
+            <canvas id="displacementChart"></canvas>
+        </div>
+        <h4>Customize the Displacement-Time Graph:</h4>
+        <form id="displacementChartForm" class="row g-3">
+            <div class="col-md-4">
+                <label for="initialVelocityInput" class="form-label">Initial Velocity (m/s):</label>
+                <input type="number" class="form-control" id="initialVelocityInput" value="0" step="any" required>
+            </div>
+            <div class="col-md-4">
+                <label for="accelerationInput2" class="form-label">Acceleration (m/s²):</label>
+                <input type="number" class="form-control" id="accelerationInput2" value="2" step="any" required>
+            </div>
+            <div class="col-md-4 align-self-end">
+                <button type="submit" class="btn btn-primary">Plot Graph</button>
+            </div>
+        </form>
+        <hr>
+        <h4>Acceleration-Time Graph:</h4>
+        <div class="chart-container">
+            <canvas id="accelerationTimeChart"></canvas>
+        </div>
+        <h4>Customize the Acceleration-Time Graph:</h4>
+        <form id="accelerationTimeChartForm" class="row g-3">
+            <div class="col-md-4">
+                <label for="initialAccelerationInput" class="form-label">Initial Acceleration (m/s²):</label>
+                <input type="number" class="form-control" id="initialAccelerationInput" value="2" step="any" required>
+            </div>
+            <div class="col-md-4">
+                <label for="finalAccelerationInput" class="form-label">Final Acceleration (m/s²):</label>
+                <input type="number" class="form-control" id="finalAccelerationInput" value="-2" step="any" required>
+            </div>
+            <div class="col-md-4 align-self-end">
+                <button type="submit" class="btn btn-primary">Plot Graph</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- Interactive Exercises Section -->
+    <section id="interactive" class="section container">
+        <h2>Interactive Exercises</h2>
+        <p>Apply what you've learned by solving these interactive problems.</p>
+        
+        <!-- Exercise 1 -->
+        <div class="mb-4">
+            <h4>Exercise 1: Calculating Final Velocity</h4>
+            <p>A car starts from rest and accelerates at <span id="acceleration1">5</span> m/s² for <span id="time1">8</span> seconds. What is its final velocity?</p>
+            <form id="exercise1Form">
+                <div class="mb-3">
+                    <label for="answer1" class="form-label">Final Velocity (m/s):</label>
+                    <input type="number" class="form-control" id="answer1" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Check Answer</button>
+                <button type="button" class="btn btn-secondary" onclick="showHint(1)">Show Hint</button>
+            </form>
+            <div id="hint1" class="hint">
+                <p>Hint: Use the equation v = v₀ + at, where v₀ is the initial velocity (0 in this case).</p>
+            </div>
+            <div id="exercise1Result" class="mt-3"></div>
+        </div>
+
+        <!-- Exercise 2 -->
+        <div class="mb-4">
+            <h4>Exercise 2: Calculating Maximum Height</h4>
+            <p>A ball is thrown vertically upward with an initial velocity of <span id="initialVelocity2">20</span> m/s. Calculate its maximum height. (Assume acceleration due to gravity is -10 m/s²)</p>
+            <form id="exercise2Form">
+                <div class="mb-3">
+                    <label for="answer2" class="form-label">Maximum Height (m):</label>
+                    <input type="number" class="form-control" id="answer2" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Check Answer</button>
+                <button type="button" class="btn btn-secondary" onclick="showHint(2)">Show Hint</button>
+            </form>
+            <div id="hint2" class="hint">
+                <p>Hint: Use the equation v² = v₀² + 2a(Δx). At the highest point, v = 0.</p>
+            </div>
+            <div id="exercise2Result" class="mt-3"></div>
+        </div>
+    </section>
+
+    <!-- Bootstrap JS via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- JavaScript for Interactivity -->
+    <script>
+        // Navigation Handling
+        document.addEventListener('DOMContentLoaded', function() {
+            const sections = document.querySelectorAll('.section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    // Remove active class from all links
+                    navLinks.forEach(nav => nav.classList.remove('active'));
+                    // Add active class to the clicked link
+                    this.classList.add('active');
+                    // Hide all sections
+                    sections.forEach(section => section.classList.remove('active'));
+                    // Show the target section
+                    const target = document.querySelector(this.getAttribute('href'));
+                    target.classList.add('active');
+                });
+            });
+        });
+
+        // Chart for One-Dimensional Motion
+        let velocityChart = null;
+        const velocityCtx = document.getElementById('velocityChart').getContext('2d');
+
+        function plotVelocityChart(a, timeRange) {
+            const labels = Array.from({length: timeRange + 1}, (_, i) => i);
+            const data = labels.map(t => a * t);
+            if (velocityChart) {
+                velocityChart.destroy();
+            }
+            velocityChart = new Chart(velocityCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Velocity (m/s)',
+                        data: data,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        fill: false,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: { title: { display: true, text: 'Time (s)' }, ticks: { precision:0 } },
+                        y: { title: { display: true, text: 'Velocity (m/s)' }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // Initial plot
+        plotVelocityChart(2, 10);
+
+        // Handle Velocity Chart Form Submission
+        document.getElementById('velocityChartForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const a = parseFloat(document.getElementById('accelerationInput').value);
+            const timeRange = parseInt(document.getElementById('timeInput').value);
+            if (isNaN(a) || isNaN(timeRange) || timeRange <= 0) {
+                alert('Please enter valid acceleration and time range.');
+                return;
+            }
+            plotVelocityChart(a, timeRange);
+        });
+
+        // Displacement-Time Graph
+        let displacementChart = null;
+        const displacementCtx = document.getElementById('displacementChart').getContext('2d');
+
+        function plotDisplacementChart(vi, a, timeRange = 10) {
+            const labels = Array.from({length: timeRange + 1}, (_, i) => i);
+            const data = labels.map(t => vi * t + 0.5 * a * t * t);
+            if (displacementChart) {
+                displacementChart.destroy();
+            }
+            displacementChart = new Chart(displacementCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Displacement (m)',
+                        data: data,
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        fill: false,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: { title: { display: true, text: 'Time (s)' }, ticks: { precision:0 } },
+                        y: { title: { display: true, text: 'Displacement (m)' }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // Initial plot
+        plotDisplacementChart(0, 2, 10);
+
+        // Handle Displacement Chart Form Submission
+        document.getElementById('displacementChartForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const vi = parseFloat(document.getElementById('initialVelocityInput').value);
+            const a = parseFloat(document.getElementById('accelerationInput2').value);
+            if (isNaN(vi) || isNaN(a)) {
+                alert('Please enter valid initial velocity and acceleration.');
+                return;
+            }
+            plotDisplacementChart(vi, a, 10);
+        });
+
+        // Acceleration-Time Graph
+        let accelerationTimeChart = null;
+        const accelerationTimeCtx = document.getElementById('accelerationTimeChart').getContext('2d');
+
+        function plotAccelerationTimeChart(ai, af, timeRange = 10) {
+            const labels = Array.from({length: timeRange + 1}, (_, i) => i);
+            const data = labels.map(t => ai + (af - ai) * t / timeRange);
+            if (accelerationTimeChart) {
+                accelerationTimeChart.destroy();
+            }
+            accelerationTimeChart = new Chart(accelerationTimeCtx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Acceleration (m/s²)',
+                        data: data,
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        fill: false,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: { title: { display: true, text: 'Time (s)' }, ticks: { precision:0 } },
+                        y: { title: { display: true, text: 'Acceleration (m/s²)' }, beginAtZero: false }
+                    }
+                }
+            });
+        }
+
+        // Initial plot
+        plotAccelerationTimeChart(2, -2, 10);
+
+        // Handle Acceleration-Time Chart Form Submission
+        document.getElementById('accelerationTimeChartForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const ai = parseFloat(document.getElementById('initialAccelerationInput').value);
+            const af = parseFloat(document.getElementById('finalAccelerationInput').value);
+            if (isNaN(ai) || isNaN(af)) {
+                alert('Please enter valid initial and final accelerations.');
+                return;
+            }
+            plotAccelerationTimeChart(ai, af, 10);
+        });
+
+        document.getElementById('exercise1Form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const a = 5; // acceleration
+            const t = 8; // time (changed to 8 seconds to get a whole number result)
+            const correctAnswer = a * t;
+            const userAnswer = parseInt(document.getElementById('answer1').value);
+            
+            if (isNaN(userAnswer)) {
+                alert('Please enter a valid whole number.');
+                return;
+            }
+            
+            const isCorrect = userAnswer === correctAnswer;
+            
+            document.getElementById('exercise1Result').innerHTML = isCorrect ?
+                '<div class="alert alert-success">Correct! Well done.</div>' :
+                `<div class="alert alert-danger">Incorrect. Try again!</div>`;
+        });
+
+        document.getElementById('exercise2Form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const vi = 20; // initial velocity
+            const h = 20; // height (pre-calculated to ensure a whole number result)
+            const correctAnswer = h;
+            const userAnswer = parseInt(document.getElementById('answer2').value);
+            
+            if (isNaN(userAnswer)) {
+                alert('Please enter a valid whole number.');
+                return;
+            }
+            
+            const isCorrect = userAnswer === correctAnswer;
+            
+            document.getElementById('exercise2Result').innerHTML = isCorrect ?
+                '<div class="alert alert-success">Correct! Excellent work.</div>' :
+                `<div class="alert alert-danger">Incorrect. The correct answer is ${correctAnswer} m. Try again!</div>`;
+        });
+
+        // Function to show hints
+        function showHint(exerciseNumber) {
+            document.getElementById(`hint${exerciseNumber}`).style.display = 'block';
+        }
+    </script>
+</body>
+</html>

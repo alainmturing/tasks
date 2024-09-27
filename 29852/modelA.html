@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kinematics Educational Tool</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Arial', sans-serif; }
+        .nav-link { color: #333; }
+        .nav-link.active { background-color: #007bff !important; color: white !important; }
+        .section-content { padding: 20px; border: 1px solid #ddd; margin-top: 20px; border-radius: 8px; }
+        .graph-container { width: 100%; height: 300px; }
+        .hint { color: #dc3545; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <div class="collapse navbar-collapse" id="navbarNav">
+    <ul class="navbar-nav">
+      <li class="nav-item"><a class="nav-link active" href="#intro">Introduction</a></li>
+      <li class="nav-item"><a class="nav-link" href="#oned">1D Motion</a></li>
+      <li class="nav-item"><a class="nav-link" href="#graphs">Motion Graphs</a></li>
+      <li class="nav-item"><a class="nav-link" href="#exercises">Exercises</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+    <div id="intro" class="section-content">
+        <h2>Introduction to Kinematics</h2>
+        <p>Kinematics involves the study of motion without considering the forces that cause it. Key terms include:</p>
+        <ul>
+            <li><b>Displacement:</b> Change in position.</li>
+            <li><b>Velocity:</b> Rate of change of displacement with time.</li>
+            <li><b>Acceleration:</b> Rate of change of velocity.</li>
+        </ul>
+    </div>
+
+    <div id="oned" class="section-content" style="display:none;">
+        <h2>One Dimensional Motion</h2>
+        <p>Describes motion along a straight line. Key equations:</p>
+        <ul>
+            <li>v = u + at</li>
+            <li>s = ut + 0.5at²</li>
+            <li>v² = u² + 2as</li>
+        </ul>
+        <p><b>Example:</b> A car accelerating from rest at 2 m/s² for 10 seconds.</p>
+        <div>
+            <label>Acceleration (m/s²):</label><input type="number" id="acceleration" value="2">
+            <label>Time (s):</label><input type="number" id="time" value="10">
+            <button onclick="plotVelocityTime()">Plot Graph</button>
+            <div class="graph-container"><canvas id="velocityTimeGraph"></canvas></div>
+        </div>
+    </div>
+
+    <div id="graphs" class="section-content" style="display:none;">
+        <h2>Motion Graphs</h2>
+        <div>
+            <h3>Displacement-Time Graph</h3>
+            <input type="text" id="dispEquation" placeholder="Enter displacement equation (e.g., 0.5*t*t)">
+            <button onclick="plotDisplacement()">Plot</button>
+            <div class="graph-container"><canvas id="dispTimeGraph"></canvas></div>
+        </div>
+        <div>
+            <h3>Acceleration-Time Graph</h3>
+            <!-- Similar input for acceleration can be added here -->
+        </div>
+    </div>
+
+    <div id="exercises" class="section-content" style="display:none;">
+        <h2>Interactive Exercises</h2>
+        <p><b>Exercise:</b> If a car starts from rest and accelerates at 3 m/s² for 5 seconds, what is its final velocity?</p>
+        <input type="number" id="exercise1" placeholder="Enter your answer">
+        <button onclick="checkAnswer('exercise1', 15)">Check Answer</button>
+        <span class="hint" onclick="hint('v = u + at')">Hint</span>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    $('.nav-link').on('click', function() {
+        $('.nav-link').removeClass('active');
+        $(this).addClass('active');
+        $('.section-content').hide();
+        $($(this).attr('href')).show();
+    });
+
+    function plotVelocityTime() {
+        const ctx = document.getElementById('velocityTimeGraph').getContext('2d');
+        const a = parseFloat(document.getElementById('acceleration').value);
+        const t = parseFloat(document.getElementById('time').value);
+        let data = Array.from({length: t+1}, (_, i) => ({x: i, y: i * a}));
+        new Chart(ctx, {
+            type: 'line',
+            data: {datasets: [{label: 'Velocity vs Time', data: data, borderColor: 'blue', fill: false}]},
+            options: {scales: {xAxes: [{scaleLabel: {display: true, labelString: 'Time (s)'}}], yAxes: [{scaleLabel: {display: true, labelString: 'Velocity (m/s)'}}]}}
+        });
+    }
+
+    function plotDisplacement() {
+        // Similar plotting logic for displacement-time graph
+    }
+
+    function checkAnswer(id, correctAnswer) {
+        let userAnswer = parseFloat(document.getElementById(id).value);
+        if(userAnswer === correctAnswer) alert('Correct!');
+        else alert('Try again!');
+    }
+
+    function hint(formula) {
+        alert(formula);
+    }
+</script>
+
+</body>
+</html>

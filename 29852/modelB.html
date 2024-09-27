@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kinematics Educational Tool</title>
+    <style>
+        body { 
+            font-family: 'Arial', sans-serif; 
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+        nav {
+            background-color: #333;
+            overflow: hidden;
+        }
+        nav a {
+            float: left;
+            display: block;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+            transition: background-color 0.3s;
+        }
+        nav a:hover, nav a.active {
+            background-color: #ddd;
+            color: black;
+        }
+        .content {
+            padding: 20px;
+            max-width: 1000px;
+            margin: auto;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .graph-input {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+        }
+        .exercise {
+            margin-top: 20px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="#intro" class="active">Introduction</a>
+    <a href="#1d-motion">1D Motion</a>
+    <a href="#graphs">Motion Graphs</a>
+    <a href="#exercises">Exercises</a>
+</nav>
+
+<div class="content">
+    <section id="intro">
+        <h2>Introduction to Kinematics</h2>
+        <p>Kinematics is the branch of physics that describes the motion of points, bodies, and systems of bodies without considering the forces that cause them to move. Key terms include:</p>
+        <ul>
+            <li><b>Displacement:</b> Change in position of an object.</li>
+            <li><b>Velocity:</b> Rate of change of displacement with respect to time.</li>
+            <li><b>Acceleration:</b> Rate of change of velocity with respect to time.</li>
+        </ul>
+    </section>
+
+    <section id="1d-motion" style="display:none;">
+        <h2>One Dimensional Motion</h2>
+        <p>In one-dimensional motion, objects move in a straight line. Here are the basic equations:</p>
+        <ul>
+            <li><b>Velocity:</b> \( v = u + at \)</li>
+            <li><b>Displacement:</b> \( s = ut + \frac{1}{2}at^2 \)</li>
+            <li><b>Velocity Squared:</b> \( v^2 = u^2 + 2as \)</li>
+        </ul>
+        <p><b>Example:</b> A car accelerating from rest at 2 m/s² for 10 seconds will reach a velocity of 20 m/s.</p>
+        <div class="graph-input">
+            <label for="acceleration">Acceleration (m/s²):</label>
+            <input type="number" id="acceleration" value="2">
+            <label for="time">Time Range (s):</label>
+            <input type="number" id="time" value="10">
+            <button onclick="plotVelocityGraph()">Plot Graph</button>
+        </div>
+        <canvas id="velocityGraph" width="400" height="200"></canvas>
+    </section>
+
+    <section id="graphs" style="display:none;">
+        <h2>Motion Graphs</h2>
+        <div class="graph-input">
+            <label for="displacement">Initial Displacement (m):</label>
+            <input type="number" id="displacement" value="0">
+            <label for="velocity">Initial Velocity (m/s):</label>
+            <input type="number" id="velocity" value="5">
+            <label for="graphTime">Time Range (s):</label>
+            <input type="number" id="graphTime" value="10">
+            <label for="graphAcc">Acceleration (m/s²):</label>
+            <input type="number" id="graphAcc" value="1">
+            <button onclick="plotMotionGraphs()">Plot Graphs</button>
+        </div>
+        <canvas id="displacementGraph" width="400" height="200"></canvas>
+        <canvas id="accelerationGraph" width="400" height="200"></canvas>
+    </section>
+
+    <section id="exercises" style="display:none;">
+        <h2>Interactive Exercises</h2>
+        <div class="exercise">
+            <p><b>Exercise 1:</b> If a car starts from rest and accelerates at 3 m/s² for 4 seconds, how fast is it going?</p>
+            <input type="text" id="ex1" placeholder="Enter answer (m/s)">
+            <button onclick="checkAnswer('ex1', 12)">Check Answer</button>
+            <button onclick="showHint('ex1Hint')">Hint</button>
+            <p id="ex1Hint" style="display:none;">Use \( v = u + at \)</p>
+        </div>
+    </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const sections = document.querySelectorAll('section');
+    const navLinks = document.querySelectorAll('nav a');
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            sections.forEach(sec => sec.style.display = 'none');
+            document.querySelector(this.getAttribute('href')).style.display = 'block';
+            navLinks.forEach(l => l.classList.remove('active'));
+            this.classList.add('active');
+        });
+    });
+
+    function plotVelocityGraph() {
+        const a = parseFloat(document.getElementById('acceleration').value);
+        const tMax = parseFloat(document.getElementById('time').value);
+        const ctx = document.getElementById('velocityGraph').getContext('2d');
+        const data = {
+            labels: Array.from({length: tMax + 1}, (_, i) => i),
+            datasets: [{
+                label: 'Velocity vs Time',
+                data: Array.from({length: tMax + 1}, (_, i) => a * i),
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        };
+        new Chart(ctx, {
+            type: 'line',
+            data: data,
+            options: { scales: { y: { beginAtZero: true } } }
+        });
+    }
+
+    function plotMotionGraphs() {
+        const s0 = parseFloat(document.getElementById('displacement').value);
+        const v0 = parseFloat(document.getElementById('velocity').value);
+        const a = parseFloat(document.getElementById('graphAcc').value);
+        const tMax = parseFloat(document.getElementById('graphTime').value);
+
+        const displacementData = Array.from({length: tMax + 1}, (_, i) => s0 + v0 * i + 0.5 * a * i * i);
+        const accelerationData = Array.from({length: tMax + 1}, () => a);
+
+        const ctxD = document.getElementById('displacementGraph').getContext('2d');
+        new Chart(ctxD, {
+            type: 'line',
+            data: {
+                labels: Array.from({length: tMax + 1}, (_, i) => i),
+                datasets: [{
+                    label: 'Displacement vs Time',
+                    data: displacementData,
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }]
+            },
+            options: { scales: { y: { beginAtZero: true } } }
+        });
+
+        const ctxA = document.getElementById('accelerationGraph').getContext('2d');
+        new Chart(ctxA, {
+            type: 'line',
+            data: {
+                labels: Array.from({length: tMax + 1}, (_, i) => i),
+                datasets: [{
+                    label: 'Acceleration vs Time',
+                    data: accelerationData,
+                    borderColor: 'rgb(255, 99, 132)',
+                    tension: 0.1
+                }]
+            },
+            options: { scales: { y: { beginAtZero: true } } }
+        });
+    }
+
+    function checkAnswer(id, correctAnswer) {
+        const userAnswer = parseFloat(document.getElementById(id).value);
+        if (Math.abs(userAnswer - correctAnswer) < 0.1) {
+            alert("Correct!");
+        } else {
+            alert("Try again!");
+        }
+    }
+
+    function showHint(id) {
+        document.getElementById(id).style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
