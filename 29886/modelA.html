@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learn Waves</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .section {
+            transition: transform 0.3s;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .section:hover { transform: translateY(-5px); }
+        #waveCanvas { background: #f8f9fa; }
+        .animate-btn { transition: all 0.3s; }
+    </style>
+</head>
+<body>
+
+<header class="text-center bg-primary text-white p-3">
+    <h1>Learn Waves</h1>
+</header>
+
+<div class="container">
+    <!-- Explanation Section -->
+    <section class="section" id="explanation">
+        <h2>What are Waves?</h2>
+        <p>Waves transfer energy without transferring matter. Key properties include:</p>
+        <ul>
+            <li><strong>Amplitude:</strong> The maximum displacement from the rest position.</li>
+            <li><strong>Frequency:</strong> Number of waves that pass a fixed point per unit time.</li>
+            <li><strong>Phase Shift:</strong> The horizontal shift of the wave from its original position.</li>
+        </ul>
+        <p class="text-info">Use the controls below to adjust these properties and see how they affect the wave.</p>
+    </section>
+
+    <div class="row">
+        <!-- Wave Controls Section -->
+        <section class="col-md-6 section" id="controls">
+            <h3>Wave Controls</h3>
+            <label>Amplitude: <input type="text" id="ampInput" value="1"> <span id="ampValue"></span></label>
+            <input type="range" min="0.1" max="3" step="0.1" value="1" id="ampSlider">
+            <br>
+            <label>Frequency: <input type="text" id="freqInput" value="1"> <span id="freqValue"></span></label>
+            <input type="range" min="0.1" max="5" step="0.1" value="1" id="freqSlider">
+            <br>
+            <label>Phase Shift: <input type="text" id="phaseInput" value="0"> <span id="phaseValue"></span></label>
+            <input type="range" min="0" max="10" step="0.1" value="0" id="phaseSlider">
+            <br>
+            <button id="animateBtn" class="btn btn-success animate-btn"><i class="fas fa-play"></i> Start Animation</button>
+        </section>
+
+        <!-- Wave Visualization Section -->
+        <section class="col-md-6 section" id="visualization">
+            <h3>Wave Visualization</h3>
+            <canvas id="waveCanvas" width="400" height="200"></canvas>
+        </section>
+    </div>
+</div>
+
+<footer class="bg-light text-center p-3">
+    <p><i class="far fa-copyright"></i> 2024 Waves Interactive Widget</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script>
+    // JavaScript for interaction and animation will go here
+    const ctx = document.getElementById('waveCanvas').getContext('2d');
+    let chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [{
+                label: 'Wave',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 2,
+                fill: false,
+                data: []
+            }]
+        },
+        options: {
+            scales: {
+                x: { title: { display: true, text: 'Position' }},
+                y: { title: { display: true, text: 'Amplitude' }}
+            }
+        }
+    });
+
+    // Function to update wave based on controls
+    function updateWave() {
+        // Logic to update chart data based on amplitude, frequency, and phase shift
+        // This would involve calculating y values for x positions based on wave equation
+        // For simplicity, let's assume we have a function calculateWaveData
+        let data = calculateWaveData(
+            parseFloat(document.getElementById('ampInput').value),
+            parseFloat(document.getElementById('freqInput').value),
+            parseFloat(document.getElementById('phaseInput').value)
+        );
+        chart.data.datasets[0].data = data;
+        chart.update();
+    }
+    
+    //Added by trainer.
+    function calculateWaveData(amplitude, frequency, phase) {
+        const numPoints = 100;
+        const data = [];
+        const time = 0;
+
+        for (let i = 0; i <= numPoints; i++) {
+            const x = i / numPoints * 4 * Math.PI;
+            const y = amplitude * Math.sin(frequency * x + phase * Math.PI / 180 + time);
+            data.push({x: x, y: y});
+        }
+
+        return data;
+    }
+
+    // Event listeners for sliders and inputs
+    ['amp', 'freq', 'phase'].forEach(param => {
+        document.getElementById(`${param}Slider`).addEventListener('input', function(e) {
+            document.getElementById(`${param}Input`).value = this.value;
+            document.getElementById(`${param}Value`).textContent = this.value;
+            updateWave();
+        });
+
+        document.getElementById(`${param}Input`).addEventListener('change', function() {
+            document.getElementById(`${param}Slider`).value = this.value;
+            document.getElementById(`${param}Value`).textContent = this.value;
+            updateWave();
+        });
+    });
+
+    let isAnimating = false;
+    document.getElementById('animateBtn').addEventListener('click', function() {
+        if (isAnimating) {
+            this.innerHTML = '<i class="fas fa-play"></i> Start Animation';
+            // Stop animation logic here
+        } else {
+            this.innerHTML = '<i class="fas fa-pause"></i> Stop Animation';
+            // Start animation logic here
+        }
+        isAnimating = !isAnimating;
+    });
+
+    // Initial wave update
+    updateWave();
+</script>
+
+</body>
+</html>

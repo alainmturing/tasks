@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Waves Interactive Widget</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        header, footer {
+            background-color: #343a40;
+            color: #fff;
+            padding: 1rem 0;
+            text-align: center;
+        }
+        .container {
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        }
+        .instructions, .controls, .visualization {
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+            transition: transform 0.3s;
+        }
+        .instructions:hover, .controls:hover, .visualization:hover {
+            transform: translateY(-5px);
+        }
+        .slider-container {
+            margin-bottom: 1.5rem;
+        }
+        .slider-label {
+            font-weight: bold;
+        }
+        .input-group-text {
+            width: 50px;
+            justify-content: center;
+        }
+        .btn-toggle {
+            width: 100%;
+        }
+        canvas {
+            width: 100%;
+            max-height: 400px;
+        }
+        @media (min-width: 992px) {
+            .app-container {
+                display: flex;
+                gap: 1.5rem;
+            }
+            .controls-container {
+                flex: 0 0 30%;
+            }
+            .visualization-container {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Learn Waves</h1>
+    </header>
+
+    <div class="container">
+        <section class="instructions">
+            <h2>Understanding Waves</h2>
+            <p>
+                Waves are disturbances that transfer energy from one place to another. Key properties of waves include:
+            </p>
+            <ul>
+                <li><strong>Amplitude:</strong> The height of the wave, representing energy.</li>
+                <li><strong>Wavelength:</strong> The distance between successive crests or troughs.</li>
+                <li><strong>Frequency:</strong> The number of wave cycles per second.</li>
+                <li><strong>Period:</strong> The time it takes for one complete wave cycle.</li>
+                <li><strong>Phase:</strong> The position of the wave in its cycle at a given time.</li>
+            </ul>
+            <p>Use the controls below to adjust these properties and see how they affect the wave.</p>
+        </section>
+
+        <div class="app-container">
+            <div class="controls-container">
+                <section class="controls">
+                    <h2>Wave Controls</h2>
+                    <div class="slider-container">
+                        <label for="amplitude" class="form-label slider-label">Amplitude</label>
+                        <div class="input-group">
+                            <input type="range" class="form-range" id="amplitude" min="1" max="10" step="0.1" value="5">
+                            <input type="number" class="form-control" id="amplitudeValue" min="1" max="10" step="0.1" value="5">
+                        </div>
+                        <small class="text-muted">Amplitude affects the height of the wave.</small>
+                    </div>
+                    <div class="slider-container">
+                        <label for="frequency" class="form-label slider-label">Frequency</label>
+                        <div class="input-group">
+                            <input type="range" class="form-range" id="frequency" min="0.5" max="5" step="0.1" value="1">
+                            <input type="number" class="form-control" id="frequencyValue" min="0.5" max="5" step="0.1" value="1">
+                        </div>
+                        <small class="text-muted">Frequency affects the number of wave cycles per second.</small>
+                    </div>
+                    <div class="slider-container">
+                        <label for="phase" class="form-label slider-label">Phase Shift</label>
+                        <div class="input-group">
+                            <input type="range" class="form-range" id="phase" min="0" max="360" step="1" value="0">
+                            <input type="number" class="form-control" id="phaseValue" min="0" max="360" step="1" value="0">
+                        </div>
+                        <small class="text-muted">Phase shift moves the wave along the x-axis.</small>
+                    </div>
+                    <button class="btn btn-primary btn-toggle">
+                        <i class="fas fa-play"></i> Start Animation
+                    </button>
+                </section>
+            </div>
+
+            <div class="visualization-container">
+                <section class="visualization">
+                    <h2>Wave Visualization</h2>
+                    <canvas id="waveCanvas"></canvas>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2024 Waves Interactive Widget</p>
+    </footer>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            // Initialize variables
+            let amplitude = parseFloat($('#amplitude').val());
+            let frequency = parseFloat($('#frequency').val());
+            let phase = parseFloat($('#phase').val());
+            let animationId;
+            let isAnimating = false;
+            let time = 0;
+
+            // Synchronize sliders and input fields
+            function syncControls(slider, input) {
+                slider.on('input', function(){
+                    input.val($(this).val());
+                    updateWave();
+                });
+                input.on('change', function(){
+                    let val = $(this).val();
+                    // Ensure the value stays within min and max
+                    let min = parseFloat($(this).attr('min'));
+                    let max = parseFloat($(this).attr('max'));
+                    if(val < min) val = min;
+                    if(val > max) val = max;
+                    $(this).val(val);
+                    slider.val(val);
+                    updateWave();
+                });
+            }
+
+            syncControls($('#amplitude'), $('#amplitudeValue'));
+            syncControls($('#frequency'), $('#frequencyValue'));
+            syncControls($('#phase'), $('#phaseValue'));
+
+            // Set up Chart.js
+            const ctx = document.getElementById('waveCanvas').getContext('2d');
+            const labels = [];
+            const dataPoints = [];
+            const waveChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Wave',
+                        data: dataPoints,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 2,
+                        fill: false,
+                        pointRadius: 0,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    animation: false,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Position (x)'
+                            }
+                        },
+                        y: {
+                            suggestedMin: -10,
+                            suggestedMax: 10,
+                            title: {
+                                display: true,
+                                text: 'Amplitude (y)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+
+            // Generate initial labels
+            const numPoints = 100;
+            for(let i=0; i<=numPoints; i++) {
+                labels.push(i);
+                dataPoints.push(0);
+            }
+
+            // Update wave data
+            function updateWave() {
+                amplitude = parseFloat($('#amplitude').val());
+                frequency = parseFloat($('#frequency').val());
+                phase = parseFloat($('#phase').val());
+                for(let i=0; i<=numPoints; i++) {
+                    const x = i / numPoints * 4 * Math.PI;
+                    dataPoints[i] = amplitude * Math.sin(frequency * x + phase * Math.PI / 180 + time);
+                }
+                waveChart.update('none');
+            }
+
+            // Animation loop
+            function animateWave() {
+                time += 0.02;
+                updateWave();
+                animationId = requestAnimationFrame(animateWave);
+            }
+
+            // Toggle button functionality
+            $('.btn-toggle').click(function(){
+                if(isAnimating){
+                    cancelAnimationFrame(animationId);
+                    $(this).html('<i class="fas fa-play"></i> Start Animation');
+                } else {
+                    animateWave();
+                    $(this).html('<i class="fas fa-pause"></i> Stop Animation');
+                }
+                isAnimating = !isAnimating;
+            });
+
+            // Initial wave rendering
+            updateWave();
+        });
+    </script>
+</body>
+</html>
