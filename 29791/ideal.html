@@ -248,14 +248,13 @@
             ingot.rotation.x = Math.PI / 2;
             scene.add(ingot);
 
-            // Add texture to simulate crystal structure
-            const textureLoader = new THREE.TextureLoader();
-            const texture = textureLoader.load('https://threejsfundamentals.org/threejs/resources/images/crystal-structure.jpg');
+            // Create and apply procedural crystal structure texture
+            const texture = createCrystalStructureTexture();
             material.map = texture;
             material.bumpMap = texture;
             material.bumpScale = 0.05;
 
-            // Add reflections
+            // Add reflections (keep this part unchanged)
             const envMapLoader = new THREE.CubeTextureLoader();
             const envMap = envMapLoader.load([
                 'https://threejsfundamentals.org/threejs/resources/images/cubemaps/computer-history-museum/pos-x.jpg',
@@ -266,6 +265,36 @@
                 'https://threejsfundamentals.org/threejs/resources/images/cubemaps/computer-history-museum/neg-z.jpg',
             ]);
             material.envMap = envMap;
+        }
+
+        function createCrystalStructureTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+
+            // Fill background
+            ctx.fillStyle = '#aaaaaa';
+            ctx.fillRect(0, 0, 256, 256);
+
+            // Draw crystal structure pattern
+            ctx.strokeStyle = '#888888';
+            ctx.lineWidth = 1;
+
+            for (let i = 0; i < 16; i++) {
+                for (let j = 0; j < 16; j++) {
+                    const x = i * 16;
+                    const y = j * 16;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x + 16, y + 16);
+                    ctx.moveTo(x + 16, y);
+                    ctx.lineTo(x, y + 16);
+                    ctx.stroke();
+                }
+            }
+
+            return new THREE.CanvasTexture(canvas);
         }
 
         function buildSiliconWafer() {

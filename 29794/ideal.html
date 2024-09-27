@@ -59,6 +59,7 @@
         .passage {
             line-height: 1.6;
             font-size: 1.1em;
+            margin-bottom: 30px;
         }
         .passage .tooltip {
             border-bottom: 1px dashed #555;
@@ -197,9 +198,19 @@
         <!-- Reading Section -->
         <div id="reading" class="section active">
             <h2>읽기 연습</h2>
-            <div class="passage" id="passage">
+            <div class="passage" id="passage1">
                 <p>
                     The <span class="tooltip" data-translate="아름다운">beautiful</span> <span class="tooltip" data-translate="해변">beach</span> stretched out before us, its <span class="tooltip" data-translate="황금빛">golden</span> sand <span class="tooltip" data-translate="반짝이는">glittering</span> under the <span class="tooltip" data-translate="밝은">bright</span> <span class="tooltip" data-translate="태양">sun</span>. <span class="tooltip" data-translate="파도">Waves</span> <span class="tooltip" data-translate="부드럽게">gently</span> <span class="tooltip" data-translate="속삭이는">whispered</span> as they <span class="tooltip" data-translate="해안을 때리다">lapped</span> against the <span class="tooltip" data-translate="해안">shore</span>, creating a <span class="tooltip" data-translate="평화로운">peaceful</span> <span class="tooltip" data-translate="멜로디">melody</span>.
+                </p>
+            </div>
+            <div class="passage" id="passage2">
+                <p>
+                    The <span class="tooltip" data-translate="번화한">bustling</span> <span class="tooltip" data-translate="도시">city</span> <span class="tooltip" data-translate="깨어나다">came to life</span> as the <span class="tooltip" data-translate="새벽">dawn</span> <span class="tooltip" data-translate="깨어나다">broke</span>. <span class="tooltip" data-translate="통근자들">Commuters</span> <span class="tooltip" data-translate="서두르다">hurried</span> along the <span class="tooltip" data-translate="붐비는">crowded</span> <span class="tooltip" data-translate="거리">streets</span>, while <span class="tooltip" data-translate="가게">shops</span> <span class="tooltip" data-translate="문을 열다">opened their doors</span> to <span class="tooltip" data-translate="손님">customers</span>. The <span class="tooltip" data-translate="활기찬">vibrant</span> <span class="tooltip" data-translate="에너지">energy</span> of the <span class="tooltip" data-translate="도시">metropolis</span> was <span class="tooltip" data-translate="감염성의">contagious</span>.
+                </p>
+            </div>
+            <div class="passage" id="passage3">
+                <p>
+                    In the <span class="tooltip" data-translate="깊은">depths</span> of the <span class="tooltip" data-translate="울창한">lush</span> <span class="tooltip" data-translate="숲">forest</span>, a <span class="tooltip" data-translate="다양한">diverse</span> <span class="tooltip" data-translate="생태계">ecosystem</span> <span class="tooltip" data-translate="번성하다">thrived</span>. <span class="tooltip" data-translate="화려한">Colorful</span> <span class="tooltip" data-translate="새들">birds</span> <span class="tooltip" data-translate="지저귀다">chirped</span> in the <span class="tooltip" data-translate="나무 꼭대기">treetops</span>, while <span class="tooltip" data-translate="작은">tiny</span> <span class="tooltip" data-translate="곤충들">insects</span> <span class="tooltip" data-translate="바쁘게 움직이다">busily</span> <span class="tooltip" data-translate="일하다">worked</span> on the <span class="tooltip" data-translate="숲 바닥">forest floor</span>. The <span class="tooltip" data-translate="고요한">tranquil</span> <span class="tooltip" data-translate="분위기">atmosphere</span> was <span class="tooltip" data-translate="가끔">occasionally</span> <span class="tooltip" data-translate="깨지다">broken</span> by the <span class="tooltip" data-translate="부드러운">gentle</span> <span class="tooltip" data-translate="바스락거리는">rustling</span> of <span class="tooltip" data-translate="나뭇잎">leaves</span>.
                 </p>
             </div>
         </div>
@@ -244,8 +255,41 @@
         { english: 'Shore', korean: '해안' },
         { english: 'Peaceful', korean: '평화로운' },
         { english: 'Melody', korean: '멜로디' },
+        { english: 'Bustling', korean: '번화한' },
+        { english: 'City', korean: '도시' },
+        { english: 'Dawn', korean: '새벽' },
+        { english: 'Commuters', korean: '통근자들' },
+        { english: 'Crowded', korean: '붐비는' },
+        { english: 'Streets', korean: '거리' },
+        { english: 'Shops', korean: '가게' },
+        { english: 'Customers', korean: '손님' },
+        { english: 'Vibrant', korean: '활기찬' },
+        { english: 'Energy', korean: '에너지' },
+        { english: 'Metropolis', korean: '대도시' },
+        { english: 'Contagious', korean: '감염성의' },
+        { english: 'Depths', korean: '깊은 곳' },
+        { english: 'Lush', korean: '울창한' },
+        { english: 'Forest', korean: '숲' },
+        { english: 'Diverse', korean: '다양한' },
+        { english: 'Ecosystem', korean: '생태계' },
+        { english: 'Thrived', korean: '번성하다' },
+        { english: 'Colorful', korean: '화려한' },
+        { english: 'Birds', korean: '새들' },
+        { english: 'Chirped', korean: '지저귀다' },
+        { english: 'Treetops', korean: '나무 꼭대기' },
+        { english: 'Tiny', korean: '작은' },
+        { english: 'Insects', korean: '곤충들' },
+        { english: 'Busily', korean: '바쁘게' },
+        { english: 'Worked', korean: '일하다' },
+        { english: 'Forest floor', korean: '숲 바닥' },
+        { english: 'Tranquil', korean: '고요한' },
+        { english: 'Atmosphere', korean: '분위기' },
+        { english: 'Occasionally', korean: '가끔' },
+        { english: 'Broken', korean: '깨지다' },
+        { english: 'Gentle', korean: '부드러운' },
+        { english: 'Rustling', korean: '바스락거리는' },
+        { english: 'Leaves', korean: '나뭇잎' },
     ];
-
     // Initialize Flashcards
     function initFlashcards() {
         const flashcardsContainer = document.getElementById('flashcards');
@@ -269,58 +313,129 @@
     // Quiz Data
     const quizPool = [
         {
-            question: "What is the Korean translation for 'Hello'?",
-            options: ['안녕하세요', '안녕히 가세요', '감사합니다', '죄송합니다'],
-            answer: '안녕하세요'
+            question: "'안녕하세요'를 영어로 어떻게 말합니까?",
+            options: ['Hello', 'Goodbye', 'Thank you', 'Sorry'],
+            answer: 'Hello'
         },
         {
-            question: "Translate 'Journey' to Korean.",
-            options: ['여행', '여정', '목표', '시간'],
-            answer: '여정'
+            question: "'여정'을 영어로 번역하세요.",
+            options: ['Travel', 'Journey', 'Goal', 'Time'],
+            answer: 'Journey'
         },
         {
-            question: "What does 'Together' mean in Korean?",
-            options: ['혼자', '함께', '서로', '곁에'],
-            answer: '함께'
+            question: "'함께'는 영어로 무엇을 의미합니까?",
+            options: ['Alone', 'Together', 'Separate', 'Apart'],
+            answer: 'Together'
         },
         {
-            question: "Translate 'Learn' to Korean.",
-            options: ['가르치다', '배우다', '알다', '생각하다'],
-            answer: '배우다'
+            question: "'배우다'를 영어로 번역하세요.",
+            options: ['Teach', 'Learn', 'Know', 'Think'],
+            answer: 'Learn'
         },
         {
-            question: "What is the Korean for 'Start'?",
-            options: ['끝', '중간', '시작해요', '멈추다'],
-            answer: '시작해요'
+            question: "'시작해요'는 영어로 어떻게 말합니까?",
+            options: ['End', 'Middle', 'Start', 'Stop'],
+            answer: 'Start'
         },
         {
-            question: "Translate 'Name' to Korean.",
-            options: ['나이', '이름', '직업', '취미'],
-            answer: '이름'
+            question: "'이름'을 영어로 번역하세요.",
+            options: ['Age', 'Name', 'Job', 'Hobby'],
+            answer: 'Name'
         },
         {
-            question: "What does 'User' mean in Korean?",
-            options: ['사용자', '관리자', '개발자', '디자이너'],
-            answer: '사용자'
+            question: "'사용자'는 영어로 무엇을 의미합니까?",
+            options: ['User', 'Admin', 'Developer', 'Designer'],
+            answer: 'User'
         },
         {
-            question: "Translate 'Help' to Korean.",
-            options: ['도와줄', '도움', '도망가다', '도착하다'],
-            answer: '도와줄'
+            question: "'도와줄'을 영어로 번역하세요.",
+            options: ['Will help', 'Help', 'Run away', 'Arrive'],
+            answer: 'Will help'
         },
         {
-            question: "What is the Korean translation for 'English'?",
-            options: ['영어', '일본어', '중국어', '프랑스어'],
-            answer: '영어'
+            question: "'영어'를 영어로 어떻게 말합니까?",
+            options: ['English', 'Japanese', 'Chinese', 'French'],
+            answer: 'English'
         },
         {
-            question: "Translate 'Beautiful' to Korean.",
-            options: ['챗', '아름다운', '중국어', '프랑스어'],
-            answer: '아름다운'
+            question: "'아름다운'을 영어로 번역하세요.",
+            options: ['Chat', 'Beautiful', 'Chinese', 'French'],
+            answer: 'Beautiful'
         }
     ];
 
     let currentQuiz = [];
+
+    function submitQuiz() {
+        const quizForm = document.getElementById('quiz-form');
+        const quizResult = document.getElementById('quiz-result');
+        const quizControls = document.getElementById('quiz-controls');
+
+        // Check if quiz is active
+        const quizState = document.getElementById('quiz-state').value;
+        if (quizState !== 'active') return;
+
+        let correctCount = 0;
+        let total = currentQuiz.length;
+        let incorrectQuestions = [];
+
+        currentQuiz.forEach((q, index) => {
+            const selected = document.querySelector(`input[name="question${index}"]:checked`);
+            if (selected && selected.value === q.answer) {
+                correctCount++;
+            } else {
+                incorrectQuestions.push(index);
+            }
+        });
+
+        // Display Results
+        quizResult.innerHTML = `
+            <div class="quiz-result ${incorrectQuestions.length === 0 ? 'correct' : 'incorrect'}">
+                당신은 ${correctCount} / ${total} 문제를 맞혔습니다.
+            </div>
+        `;
+
+        // Highlight Incorrect Questions
+        incorrectQuestions.forEach(index => {
+            const questionDiv = quizForm.children[index];
+            questionDiv.style.border = '2px solid #e74c3c';
+            questionDiv.style.borderRadius = '5px';
+        });
+
+        // Disable all radio buttons
+        const allRadioButtons = quizForm.querySelectorAll('input[type="radio"]');
+        allRadioButtons.forEach(radio => {
+            radio.disabled = true;
+        });
+
+        // Update quiz state
+        document.getElementById('quiz-state').value = 'submitted';
+        quizControls.style.display = 'block';
+    }
+
+    // Retake Quiz
+    function retakeQuiz() {
+        const quizForm = document.getElementById('quiz-form');
+        const quizResult = document.getElementById('quiz-result');
+        const quizControls = document.getElementById('quiz-controls');
+
+        // Reset styles
+        currentQuiz.forEach((q, index) => {
+            const questionDiv = quizForm.children[index];
+            questionDiv.style.border = 'none';
+        });
+
+        // Reset form and enable all radio buttons
+        quizForm.reset();
+        const allRadioButtons = quizForm.querySelectorAll('input[type="radio"]');
+        allRadioButtons.forEach(radio => {
+            radio.disabled = false;
+        });
+
+        quizResult.innerHTML = '';
+        quizControls.style.display = 'none';
+        document.getElementById('quiz-state').value = 'active';
+    }
 
     // Generate a unique 2-question quiz
     function generateQuiz() {
@@ -361,68 +476,6 @@
         hiddenInput.value = 'active';
         quizForm.appendChild(hiddenInput);
     }
-
-    // Submit Quiz
-    function submitQuiz() {
-        const quizForm = document.getElementById('quiz-form');
-        const quizResult = document.getElementById('quiz-result');
-        const quizControls = document.getElementById('quiz-controls');
-
-        // Check if quiz is active
-        const quizState = document.getElementById('quiz-state').value;
-        if (quizState !== 'active') return;
-
-        let correctCount = 0;
-        let total = currentQuiz.length;
-        let incorrectQuestions = [];
-
-        currentQuiz.forEach((q, index) => {
-            const selected = document.querySelector(`input[name="question${index}"]:checked`);
-            if (selected && selected.value === q.answer) {
-                correctCount++;
-            } else {
-                incorrectQuestions.push(index);
-            }
-        });
-
-        // Display Results
-        quizResult.innerHTML = `
-            <div class="quiz-result ${incorrectQuestions.length === 0 ? 'correct' : 'incorrect'}">
-                당신은 ${correctCount} / ${total} 문제를 맞혔습니다.
-            </div>
-        `;
-
-        // Highlight Incorrect Questions
-        incorrectQuestions.forEach(index => {
-            const questionDiv = quizForm.children[index];
-            questionDiv.style.border = '2px solid #e74c3c';
-            questionDiv.style.borderRadius = '5px';
-        });
-
-        // Update quiz state
-        document.getElementById('quiz-state').value = 'submitted';
-        quizControls.style.display = 'block';
-    }
-
-    // Retake Quiz
-    function retakeQuiz() {
-        const quizForm = document.getElementById('quiz-form');
-        const quizResult = document.getElementById('quiz-result');
-        const quizControls = document.getElementById('quiz-controls');
-
-        // Reset styles
-        currentQuiz.forEach((q, index) => {
-            const questionDiv = quizForm.children[index];
-            questionDiv.style.border = 'none';
-        });
-
-        // Reset form
-        quizForm.reset();
-        quizResult.innerHTML = '';
-        quizControls.style.display = 'none';
-        document.getElementById('quiz-state').value = 'active';
-    }
-
     // Show Section
     function showSection(sectionId) {
         const sections = document.querySelectorAll('.section');
