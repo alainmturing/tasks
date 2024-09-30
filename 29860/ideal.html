@@ -337,8 +337,10 @@
                     if (distance < 10) return; // Avoid singularity
                     const magnitude = charge.magnitude / distanceSquared;
                     const theta = Math.atan2(dy, dx);
-                    const Ex = magnitude * Math.cos(theta);
-                    const Ey = magnitude * Math.sin(theta);
+                    // Adjust the direction based on the charge type
+                    const sign = charge.type === 'positive' ? 1 : -1;
+                    const Ex = sign * magnitude * Math.cos(theta);
+                    const Ey = sign * magnitude * Math.sin(theta);
                     E = math.add(E, math.complex(Ex, Ey));
                 });
                 return E;
