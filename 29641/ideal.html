@@ -271,7 +271,10 @@
             { korean: '전화', romanization: 'jeonhwa', english: 'telephone' },
             { korean: '텔레비전', romanization: 'tellebijeon', english: 'television' },
             { korean: '냉장고', romanization: 'naengjanggo', english: 'refrigerator' },
-            { korean: '오븐', romanization: 'obeun', english: 'oven' }
+            { korean: '오븐', romanization: 'obeun', english: 'oven' },
+            { korean: '안경', romanization: 'angyeong', english: 'glasses' },
+            { korean: '지갑', romanization: 'jigap', english: 'wallet' },
+            { korean: '우산', romanization: 'usan', english: 'umbrella' }
         ];
 
         // Populate Vocabulary Grid
@@ -393,6 +396,11 @@
                         feedback.textContent = `Incorrect. The correct answer is "${quiz.options[quiz.correct]}".`;
                         feedback.style.color = '#e74c3c';
                     }
+                    // Disable radio buttons and submit button after submission
+                    quizDiv.querySelectorAll('input[type="radio"]').forEach(input => {
+                        input.disabled = true;
+                    });
+                    submitBtn.disabled = true;
                 } else {
                     feedback.textContent = 'Please select an answer.';
                     feedback.style.color = '#e67e22';
