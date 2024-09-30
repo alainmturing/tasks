@@ -1,140 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Space Rocket</title>
-    <style>
-        body { margin: 0; overflow: hidden; background: #000; }
-        #gameCanvas { display: block; }
-        #scoreBoard { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); 
-                      color: white; font-family: Arial, sans-serif; font-size: 24px; 
-                      background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 10px; }
-    </style>
+<meta charset="UTF-8">
+<title>Space Rocket</title>
+<style>
+body { margin: 0; overflow: hidden; background: black; }
+#gameCanvas { display: block; }
+#scoreBoard { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.7); color: white; padding: 10px 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); font-family: Arial, sans-serif; }
+#startScreen, #endScreen { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); display: flex; justify-content: center; align-items: center; flex-direction: column; color: white; font-family: Arial, sans-serif; }
+button { margin-top: 20px; padding: 10px 20px; font-size: 1em; cursor: pointer; }
+</style>
 </head>
 <body>
-
-<div id="scoreBoard">Score: <span id="score">0</span></div>
-<div id="levelSelect" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; text-align: center;">
-    <h2>Select Difficulty</h2>
+<div id="startScreen">
+    <h1>Space Rocket</h1>
     <button onclick="startGame(1)">Easy</button>
     <button onclick="startGame(2)">Medium</button>
     <button onclick="startGame(3)">Hard</button>
 </div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
-
-<script type="module">
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gameCanvas') });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-
-    // Phaser game config
-    const config = {
-        type: Phaser.WEBGL,
-        width: window.innerWidth,
-        height: window.innerHeight,
-        scene: {
-            create: create,
-            update: update
-        },
-        audio: {
-            noAudio: false,
-            disableWebAudio: false
+<div id="endScreen" style="display:none;">
+    <h2>Game Over</h2>
+    <p>Your Score: <span id="finalScore"></span></p>
+    <button onclick="restartGame()">Restart</button>
+    <button onclick="location.reload()">Change Difficulty</button>
+</div>
+<div id="scoreBoard">Score: <span id="score">0</span></div>
+<canvas id="gameCanvas"></canvas>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js"></script>
+<script>
+const gameConfig = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 600,
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 0 },
+            debug: false
         }
-    };
+    },
+    scene: {
+        preload: preload,
+        create: create,
+        update: update
+    },
+    audio: {
+        disableWebAudio: false
+    }
+};
 
-    let game = new Phaser.Game(config);
-    let rocket;
-    let cursors;
-    let meteors;
-    let score = 0;
-    let scoreText;
-    let level = 1;
-    let gameSound, collisionSound;
+let game;
+let rocket;
+let meteors;
+let score = 0;
+let scoreText;
+let cursors;
+let gameSound;
+let collisionSound;
+let difficulty = 1;
+let meteorSpeed = -200;
 
-    function create() {
-        // Background stars
-        for (let i = 0; i < 500; i++) {
-            let geometry = new THREE.SphereGeometry(0.5, 32, 32);
-            let material = new THREE.MeshBasicMaterial({ color: 0xffffff });
-            let star = new THREE.Mesh(geometry, material);
-            star.position.set(Math.random() * 2000 - 1000, Math.random() * 2000 - 1000, Math.random() * 2000 - 1000);
-            scene.add(star);
-        }
+function preload() {
+    this.load.svg('rocket', 'rocket.svg', { width: 50, height: 100 });
+    this.load.image('meteor', 'meteor.png');
+    this.load.audio('gameSound', ['space_music.mp3']);
+    this.load.audio('collisionSound', ['collision.mp3']);
+}
 
-        // Rocket creation would go here with Three.js, simplified for this example
-        rocket = this.add.rectangle(100, window.innerHeight / 2, 50, 100, 0x6666ff).setOrigin(0, 0.5);
+function create() {
+    // Background
+    this.add.tileSprite(0, 0, this.sys.game.config.width, this.sys.game.config.height, 'starfield').setOrigin(0);
 
-        // Meteors group
-        meteors = this.physics.add.group();
+    // Rocket
+    rocket = this.physics.add.image(100, 300, 'rocket').setScale(0.5);
+    rocket.setCollideWorldBounds(true);
 
-        // Score
-        scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#FFF' });
-        
-        // Audio
-        gameSound = this.sound.add('gameMusic', { loop: true, volume: 0.3 });
-        collisionSound = this.sound.add('collision', { volume: 0.5 });
-        gameSound.play();
+    // Meteors
+    meteors = this.physics.add.group();
 
-        // Controls
-        cursors = this.input.keyboard.createCursorKeys();
+    // Score
+    scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#FFF' });
 
-        // Spawn meteors
-        this.time.addEvent({
-            delay: 1500 / level,
-            callback: spawnMeteor,
-            callbackScope: this,
-            loop: true
-        });
+    // Sounds
+    gameSound = this.sound.add('gameSound', { loop: true });
+    collisionSound = this.sound.add('collisionSound');
 
-        // Collision detection
-        this.physics.add.collider(rocket, meteors, hitMeteor, null, this);
+    // Controls
+    cursors = this.input.keyboard.createCursorKeys();
+
+    // Meteor spawning
+    this.time.addEvent({
+        delay: 2000 / difficulty,
+        callback: createMeteor,
+        callbackScope: this,
+        loop: true
+    });
+
+    gameSound.play();
+}
+
+function update() {
+    // Rocket movement
+    if (cursors.up.isDown) {
+        rocket.setVelocityY(-200);
+    } else if (cursors.down.isDown) {
+        rocket.setVelocityY(200);
+    } else {
+        rocket.setVelocityY(0);
     }
 
-    function update() {
-        // Rocket movement
-        if (cursors.up.isDown) rocket.y -= 5;
-        if (cursors.down.isDown) rocket.y += 5;
-        if (cursors.left.isDown) rocket.x -= 5;
-        if (cursors.right.isDown) rocket.x += 5;
+    // Score update
+    score += 1;
+    scoreText.setText('Score: ' + score);
 
-        // Keep rocket within bounds
-        rocket.y = Phaser.Math.Clamp(rocket.y, 50, window.innerHeight - 50);
-        rocket.x = Phaser.Math.Clamp(rocket.x, 0, window.innerWidth - 50);
+    // Check collisions
+    this.physics.add.collider(rocket, meteors, hitMeteor, null, this);
+}
 
-        // Update score based on time or distance traveled
-        score += 1;
-        scoreText.setText('Score: ' + score);
+function createMeteor() {
+    let meteor = meteors.create(game.config.width, Phaser.Math.Between(50, 550), 'meteor');
+    meteor.setVelocityX(meteorSpeed * difficulty);
+    meteor.setScale(Phaser.Math.FloatBetween(0.5, 1));
+}
 
-        // Camera follows the rocket
-        camera.position.x = rocket.x - window.innerWidth / 4;
-        camera.position.y = rocket.y;
-    }
+function hitMeteor(rocket, meteor) {
+    this.physics.pause();
+    rocket.setTint(0xff0000);
+    collisionSound.play();
+    gameOver();
+}
 
-    function spawnMeteor() {
-        let meteor = meteors.create(rocket.x + window.innerWidth, Phaser.Math.Between(50, window.innerHeight - 50), 'meteor');
-        meteor.setVelocityX(-100 * level);
-        meteor.setCollideWorldBounds(false);
-    }
+function gameOver() {
+    gameSound.stop();
+    document.getElementById('endScreen').style.display = 'flex';
+    document.getElementById('finalScore').textContent = score;
+    game.destroy(true);
+}
 
-    function hitMeteor() {
-        collisionSound.play();
-        this.physics.pause();
-        gameSound.stop();
-        alert('Game Over! Your score: ' + score);
-        location.reload(); // Simple restart mechanism
-    }
+function startGame(level) {
+    difficulty = level;
+    meteorSpeed = -200 * level;
+    document.getElementById('startScreen').style.display = 'none';
+    game = new Phaser.Game(gameConfig);
+}
 
-    function startGame(difficulty) {
-        level = difficulty;
-        document.getElementById('levelSelect').style.display = 'none';
-        gameSound.play();
-    }
-
-    // Assume 'meteor' and audio assets are loaded elsewhere in your setup
+function restartGame() {
+    document.getElementById('endScreen').style.display = 'none';
+    score = 0;
+    game = new Phaser.Game(gameConfig);
+}
 </script>
-
 </body>
 </html>

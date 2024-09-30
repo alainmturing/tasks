@@ -1,51 +1,149 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Space Rocket</title>
-<style>
-body { margin: 0; background: #000; overflow: hidden; }
-#gameCanvas { display: block; margin: auto; }
-#scoreBox { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 5px; font-family: Arial, sans-serif; }
-</style>
+    <meta charset="UTF-8">
+    <title>Space Rocket</title>
+    <style>
+        body { margin: 0; padding: 0; background: #000; overflow: hidden; }
+        #gameCanvas { display: block; margin: auto; }
+        #scoreBoard { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); 
+                      color: white; font-family: Arial, sans-serif; font-size: 24px; 
+                      padding: 10px 20px; background: rgba(0,0,0,0.5); border-radius: 10px; }
+        #levelSelect { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                       background: #fff; padding: 20px; border-radius: 5px; text-align: center; }
+    </style>
 </head>
 <body>
 
-<div id="scoreBox">Score: <span id="score">0</span></div>
+<div id="levelSelect">
+    <h2>Select Difficulty</h2>
+    <button onclick="startGame(1)">Easy</button>
+    <button onclick="startGame(2)">Medium</button>
+    <button onclick="startGame(3)">Hard</button>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+<div id="scoreBoard"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
 
 <script>
-const config = {
-    type: Phaser.AUTO,
-    width: 800,
-    height: 600,
-    physics: {
-        default: 'arcade',
-        arcade: {
-            gravity: { y: 0 },
-            debug: false
-        }
-    },
-    scene: {
-        preload: preload,
-        create: create,
-        update: update
-    },
-    audio: {
-        disableWebAudio: false
+    let game;
+    let rocket;
+    let meteors;
+    let cursors;
+    let score = 0;
+    let scoreText;
+    let gameSound, collisionSound;
+
+    function startGame(level) {
+        document.getElementById('levelSelect').style.display = 'none';
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            },
+            audio: {
+                disableWebAudio: false
+            }
+        };
+
+        game = new Phaser.Game(config);
+        game.difficulty = level; // Store difficulty
     }
-};
 
-let game = new Phaser.Game(config);
-let rocket;
-let meteors;
-let cursors;
-let score = 0;
-let scoreText;
-let gameSound;
-let collisionSound;
-let level = 1;
-let levelText;
+    function preload() {
+        this.load.image('sky', 'https://raw.githubusercontent.com/photonstorm/phaser3-examples/master/public/assets/skies/space3.png');
+        this.load.svg('rocket', 'rocket.svg'); // Replace with actual path or CDN
+        this.load.image('meteor', 'meteor.png'); // Replace with actual path or CDN
+        this.load.audio('gameSound', ['space_music.mp3']);
+        this.load.audio('collisionSound', ['collision.mp3']);
+    }
 
-function preload() {
-    this.load.image('rocket', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAACXBIWXMAAAsSAAALEgHS3X78AAAAoElEQVRIx+2V0Q2AIAxDwe2/89a4hARXoQ3kK0S9XgC2nW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2yS9gZgAb2xS9gXgD7kK0C2iW2y
+    function create() {
+        this.add.image(400, 300, 'sky').setScale(2);
+
+        // Sounds
+        gameSound = this.sound.add('gameSound', { loop: true });
+        collisionSound = this.sound.add('collisionSound');
+        gameSound.play();
+
+        // Rocket
+        rocket = this.physics.add.image(100, 300, 'rocket').setScale(0.5);
+        rocket.setCollideWorldBounds(true);
+
+        // Meteors
+        meteors = this.physics.add.group();
+        
+        // Score
+        scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '32px', fill: '#FFF' });
+        this.physics.world.setBoundsCollision(true, true, true, true);
+
+        // Controls
+        cursors = this.input.keyboard.createCursorKeys();
+
+        // Spawn meteors
+        this.time.addEvent({
+            delay: 2000 / game.difficulty,
+            callback: spawnMeteor,
+            callbackScope: this,
+            loop: true
+        });
+    }
+
+    function update() {
+        if (cursors.up.isDown) {
+            rocket.setVelocityY(-200);
+        } else if (cursors.down.isDown) {
+            rocket.setVelocityY(200);
+        } else {
+            rocket.setVelocityY(0);
+        }
+
+        // Check collisions
+        this.physics.add.collider(rocket, meteors, hitMeteor, null, this);
+    }
+
+    function spawnMeteor() {
+        let x = 800;
+        let y = Phaser.Math.Between(50, 550);
+        let meteor = meteors.create(x, y, 'meteor');
+        meteor.setVelocityX(-100 * game.difficulty);
+        meteor.setCollideWorldBounds(true);
+        meteor.setBounce(1);
+    }
+
+    function hitMeteor() {
+        this.physics.pause();
+        collisionSound.play();
+        gameSound.stop();
+        rocket.setTint(0xff0000);
+        this.time.delayedCall(1000, restartGame, [], this);
+    }
+
+    function restartGame() {
+        game.destroy(true);
+        document.getElementById('scoreBoard').innerHTML = ''; // Clear score
+        document.getElementById('levelSelect').style.display = 'block';
+    }
+
+    // This function should be called when updating the score
+    function updateScore(points) {
+        score += points;
+        scoreText.setText('Score: ' + score);
+    }
+</script>
+
+</body>
+</html>

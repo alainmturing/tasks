@@ -109,7 +109,9 @@
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
         function preload() {
-            // No preloading needed
+            // Load external assets
+            this.load.svg('rocket', 'rocket.svg');
+            this.load.image('meteor', 'meteor.png');
         }
 
         function create() {
@@ -122,28 +124,15 @@
                 stars.add(star);
             }
 
-            // Generate rocket texture
-            const rocketGraphics = this.make.graphics({ x: 0, y: 0, add: false });
-            rocketGraphics.fillStyle(0xcccccc, 1);
-            rocketGraphics.fillRect(-30, -15, 60, 30);
-            rocketGraphics.fillStyle(0xff0000, 1);
-            rocketGraphics.fillStyle(0x0000ff, 1);
-            rocketGraphics.fillRect(-30, -3, 10, 6);
-            rocketGraphics.generateTexture('rocket', 60, 30);
-            rocketGraphics.destroy();
-
-            // Generate meteor texture
-            const meteorGraphics = this.make.graphics({ x: 0, y: 0, add: false });
-            meteorGraphics.fillStyle(0x888888, 1);
-            meteorGraphics.fillCircle(20, 20, 20);
-            meteorGraphics.generateTexture('meteor', 40, 40);
-            meteorGraphics.destroy();
-
             // Create rocket sprite
             rocket = this.physics.add.sprite(config.width / 4, config.height / 2, 'rocket');
             rocket.setCollideWorldBounds(true);
             rocket.setOrigin(0.5, 0.5);
             rocket.setVisible(false);  // Hide rocket initially
+
+            // Adjust rocket size
+            const rocketScaleFactor = 0.15;  // Adjust this value to change the rocket size
+            rocket.setScale(rocketScaleFactor);
 
             // Create meteors group
             meteors = this.physics.add.group();
@@ -168,6 +157,11 @@
             initSounds.call(this);
         }
 
+        let rocketAcceleration = 0;
+        const maxRocketSpeed = 300;
+        const rocketAccelerationRate = 15;
+        const rocketDecelerationRate = 10;
+
         function update(time, delta) {
             if (gameOverFlag) return;
 
@@ -183,16 +177,32 @@
 
             // Rocket movement and rotation
             if (cursors.up.isDown) {
-                rocket.y -= 5;
-                rocket.angle = -15;
+                rocketAcceleration = Phaser.Math.Clamp(rocketAcceleration - rocketAccelerationRate, -maxRocketSpeed, maxRocketSpeed);
+                rocket.angle = Phaser.Math.Clamp(rocket.angle - 2, -30, 30);
             } else if (cursors.down.isDown) {
-                rocket.y += 5;
-                rocket.angle = 15;
-            } else if (cursors.right.isDown) {
-                rocket.angle = 0;
+                rocketAcceleration = Phaser.Math.Clamp(rocketAcceleration + rocketAccelerationRate, -maxRocketSpeed, maxRocketSpeed);
+                rocket.angle = Phaser.Math.Clamp(rocket.angle + 2, -30, 30);
             } else {
-                rocket.angle = 0;
+                // Deceleration when no keys are pressed
+                if (rocketAcceleration > 0) {
+                    rocketAcceleration = Math.max(0, rocketAcceleration - rocketDecelerationRate);
+                } else if (rocketAcceleration < 0) {
+                    rocketAcceleration = Math.min(0, rocketAcceleration + rocketDecelerationRate);
+                }
+                
+                // Gradually return to horizontal position
+                if (rocket.angle > 0) {
+                    rocket.angle = Math.max(0, rocket.angle - 1);
+                } else if (rocket.angle < 0) {
+                    rocket.angle = Math.min(0, rocket.angle + 1);
+                }
             }
+
+            // Apply acceleration to rocket's velocity
+            rocket.setVelocityY(rocketAcceleration);
+
+            // Ensure rocket stays within screen bounds
+            rocket.y = Phaser.Math.Clamp(rocket.y, rocket.height / 2, config.height - rocket.height / 2);
 
             // Update score based on time
             score += delta / 1000;
@@ -219,7 +229,11 @@
             const meteor = meteors.create(config.width + 50, y, 'meteor');
             meteor.setVelocityX(-getMeteorSpeed());
             meteor.setCollideWorldBounds(false);
-            meteor.setScale(1.5);
+            
+            // Adjust meteor size (increased by 50%)
+            const meteorScaleFactor = 0.15;  // Changed from 0.1 to 0.15
+            meteor.setScale(meteorScaleFactor);
+            
             meteor.setOrigin(0.5, 0.5);
         }
 
