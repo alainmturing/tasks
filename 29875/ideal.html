@@ -69,6 +69,7 @@
             box-shadow: 0 0 10px #000;
             font-size: 24px;
             z-index: 1;
+            white-space: nowrap;
         }
 
         #player {
@@ -89,7 +90,6 @@
             width: 60px;
             height: 60px;
             background-color: #00ff00;
-            transition: left 0.3s;
             z-index: 1;
         }
 
@@ -162,7 +162,7 @@
         </div>
 
         <!-- Score Board -->
-        <div id="scoreBoard">Score: 0</div>
+        <div id="scoreBoard">Score: 0 | Obstacles Avoided: 0</div>
 
         <!-- Path Lines -->
         <div class="path-line" id="topPath"></div>
@@ -179,6 +179,7 @@
         <div id="gameOverScreen" style="display: none;">
             <h1 style="font-size: 48px; margin-bottom: 20px;">Game Over</h1>
             <h3 style="margin-bottom: 30px;">Your Score: <span id="finalScore">0</span></h3>
+            <h3 style="margin-bottom: 30px;">Obstacles Avoided: <span id="finalObstaclesAvoided">0</span></h3>
             <button class="button" onclick="restartGame()">Restart</button>
             <button class="button" onclick="backToMenu()">Main Menu</button>
         </div>
@@ -191,49 +192,57 @@
         const gameOverScreen = document.getElementById('gameOverScreen');
         const scoreBoard = document.getElementById('scoreBoard');
         const finalScore = document.getElementById('finalScore');
+        const finalObstaclesAvoided = document.getElementById('finalObstaclesAvoided');
         const player = document.getElementById('player');
-
-        let gameInterval;
-        let obstacleInterval;
+    
+        let animationFrameId;
+        let scoreInterval;
+        let lastTime = 0;
         let score = 0;
+        let obstaclesAvoided = 0;
         let lane = 1; // 0: Top, 1: Middle, 2: Bottom
         const lanes = [150, 270, 390]; // Y positions for lanes
         let obstacles = [];
         let difficulty = 'Easy';
-        let speed = 5;
+        let speed = 5; // pixels per frame
         let obstacleFrequency = 2000;
-
+        let isGameOver = false;
+        let lastObstacleTime = 0;
+        
         // Sound Effects using Web Audio API
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         const audioCtx = new AudioContext();
-
+    
         function playSound(frequency, type, duration) {
             const oscillator = audioCtx.createOscillator();
             const gainNode = audioCtx.createGain();
-
+    
             oscillator.connect(gainNode);
             gainNode.connect(audioCtx.destination);
-
+    
             oscillator.type = type;
             oscillator.frequency.value = frequency;
             gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-
+    
             oscillator.start();
             oscillator.stop(audioCtx.currentTime + duration);
         }
-
+    
         function startGame(selectedDifficulty) {
             difficulty = selectedDifficulty;
             startScreen.style.display = 'none';
             gameOverScreen.style.display = 'none';
             score = 0;
-            scoreBoard.innerText = 'Score: 0';
+            obstaclesAvoided = 0;
+            updateScoreBoard();
             lane = 1;
             player.style.top = lanes[lane] + 'px';
             // Remove existing obstacles
             obstacles.forEach(obs => gameContainer.removeChild(obs.element));
             obstacles = [];
-
+            isGameOver = false;
+            lastObstacleTime = 0;
+    
             // Set difficulty
             switch(difficulty) {
                 case 'Easy':
@@ -252,48 +261,70 @@
                     obstacleFrequency = 2000;
                     speed = 5;
             }
-
+    
+            // Start Score Interval
+            scoreInterval = setInterval(() => {
+                score += 1;
+                updateScoreBoard();
+            }, 100); // Update score every 100ms
+    
             // Start Game Loop
-            gameInterval = setInterval(updateGame, 30);
-            obstacleInterval = setInterval(createObstacle, obstacleFrequency);
+            lastTime = performance.now();
+            gameLoop(lastTime);
         }
-
-        function updateGame() {
-            score += 1;
-            scoreBoard.innerText = 'Score: ' + score;
+    
+        function gameLoop(currentTime) {
+            if (isGameOver) return;
+    
+            const deltaTime = (currentTime - lastTime) / 1000; // Convert to seconds
+            lastTime = currentTime;
+    
+            updateGame(deltaTime, currentTime);
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+    
+        function updateGame(deltaTime, currentTime) {
+            // Create new obstacles
+            if (currentTime - lastObstacleTime > obstacleFrequency) {
+                createObstacle();
+                lastObstacleTime = currentTime;
+            }
 
             obstacles.forEach((obs, index) => {
                 obs.x -= speed;
                 obs.element.style.left = obs.x + 'px';
 
                 // Collision Detection
-                const playerRect = player.getBoundingClientRect();
-                const obsRect = obs.element.getBoundingClientRect();
-
-                if (playerRect.left < obsRect.left + obsRect.width &&
-                    playerRect.left + playerRect.width > obsRect.left &&
-                    playerRect.top < obsRect.top + obsRect.height &&
-                    playerRect.top + playerRect.height > obsRect.top) {
-                        endGame();
+                if (checkCollision(player, obs.element)) {
+                    endGame();
+                    return;
                 }
 
-                // Remove off-screen obstacles
+                // Remove off-screen obstacles and increment obstaclesAvoided
                 if (obs.x < -60) {
                     gameContainer.removeChild(obs.element);
                     obstacles.splice(index, 1);
+                    obstaclesAvoided++;
+                    updateScoreBoard();
                 }
             });
         }
-
+    
+        function updateScoreBoard() {
+            scoreBoard.innerText = `Score: ${score} | Obstacles Avoided: ${obstaclesAvoided}`;
+        }
+    
         function createObstacle() {
+            if (isGameOver) return;
+    
             const obstacle = document.createElement('div');
             obstacle.classList.add('obstacle');
-
+    
             // Randomly choose obstacle type
             const types = ['rock', 'spike', 'bird'];
             const chosenType = types[Math.floor(Math.random() * types.length)];
             obstacle.classList.add(chosenType);
-
+    
             // Set lane based on obstacle type
             let obstacleLane;
             if (chosenType === 'bird') {
@@ -305,53 +336,89 @@
                 obstacleLane = Math.floor(Math.random() * lanes.length);
                 obstacle.style.bottom = lanes[obstacleLane] + 'px';
             }
-
+    
             obstacle.style.left = '800px';
             gameContainer.appendChild(obstacle);
-
+    
             obstacles.push({
                 element: obstacle,
                 lane: obstacleLane,
                 x: 800
             });
-
+    
             // Play obstacle appearance sound
             playSound(250, 'square', 0.1);
         }
-
+    
+        function checkCollision(playerElement, obstacleElement) {
+            const playerRect = playerElement.getBoundingClientRect();
+            const obsRect = obstacleElement.getBoundingClientRect();
+    
+            return (playerRect.left < obsRect.right &&
+                    playerRect.right > obsRect.left &&
+                    playerRect.top < obsRect.bottom &&
+                    playerRect.bottom > obsRect.top);
+        }
+    
         function endGame() {
-            clearInterval(gameInterval);
-            clearInterval(obstacleInterval);
+            isGameOver = true;
+            cancelAnimationFrame(animationFrameId);
+            clearInterval(scoreInterval);
             finalScore.innerText = score;
+            finalObstaclesAvoided.innerText = obstaclesAvoided;
             gameOverScreen.style.display = 'flex';
-
+    
             // Play collision sound
             playSound(100, 'sawtooth', 0.5);
         }
-
+    
         function restartGame() {
             startGame(difficulty);
         }
-
+    
         function backToMenu() {
             gameOverScreen.style.display = 'none';
             startScreen.style.display = 'flex';
         }
-
+    
         // Handle Player Movement
         document.addEventListener('keydown', function(e) {
+            if (isGameOver) return;
+
+            let newLane = lane;
+
             if (e.key === 'ArrowUp') {
                 if (lane > 0) {
-                    lane--;
-                    player.style.top = lanes[lane] + 'px';
-                    playSound(300, 'triangle', 0.1);
+                    newLane = lane - 1;
                 }
             } else if (e.key === 'ArrowDown') {
                 if (lane < lanes.length - 1) {
-                    lane++;
-                    player.style.top = lanes[lane] + 'px';
-                    playSound(300, 'triangle', 0.1);
+                    newLane = lane + 1;
                 }
+            }
+
+            // Check for collision before moving
+            const playerRect = player.getBoundingClientRect();
+            let collision = false;
+
+            obstacles.forEach(obs => {
+                const obsRect = obs.element.getBoundingClientRect();
+                if (
+                    playerRect.left < obsRect.right &&
+                    playerRect.right > obsRect.left &&
+                    lanes[newLane] < obsRect.bottom &&
+                    (lanes[newLane] + 60) > obsRect.top
+                ) {
+                    collision = true;
+                }
+            });
+
+            if (!collision) {
+                lane = newLane;
+                player.style.top = lanes[lane] + 'px';
+                playSound(300, 'triangle', 0.1);
+            } else {
+                endGame();
             }
         });
     </script>
