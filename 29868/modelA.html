@@ -39,9 +39,9 @@ const levels = {
 
 // Load assets
 PIXI.Loader.shared
-    .add('player', 'path/to/player.png')
-    .add('bubble', 'path/to/bubble.png')
-    .add('projectile', 'path/to/projectile.png')
+    .add('player', './player.png')
+    .add('bubble', './bubble.png')
+    .add('projectile', './projectile.png')
     .load(setup);
 
 function setup() {
@@ -124,7 +124,7 @@ function shoot() {
     projectiles.push(projectile);
     
     // Play shooting sound
-    playSound('path/to/shoot.wav');
+    playSound('./shoot.wav');
 }
 
 function spawnBubble() {
